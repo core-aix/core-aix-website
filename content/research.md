@@ -49,8 +49,8 @@ Representative papers:
 
 - A. Piaseczny, M. K. C. Shisher, S. Wang, C. Brinton, ["RCCDA: adaptive model updates in the presence of concept drift under a constrained resource budget"](https://arxiv.org/abs/2505.24149), in *Annual Conference on Neural Information Processing Systems (NeurIPS)*, Dec. 2025 (acceptance rate: 24.5%).
 - P. Valdeira, S. Wang, Y. Chi, ["Vertical federated learning with missing features during training and inference"](https://openreview.net/pdf?id=OXi1FmHGzz), in *International Conference on Learning Representations (ICLR)*, May 2025.
-- S. Wang, M. Ji, ["A lightweight method for tackling unknown participation statistics in federated averaging"](https://openreview.net/pdf?id=ZKEuFKfCKA), in *International Conference on Learning Representations (ICLR)*, May 2024 (spotlight, 5% of submitted papers). [[Proceedings Link]](https://openreview.net/forum?id=ZKEuFKfCKA) [[Code]](https://shiqiang.wang/code/fedau)
-- D. Jhunjhunwala, S. Wang, G. Joshi, ["FedExP: speeding up federated averaging via extrapolation"](https://openreview.net/pdf?id=IPrzNbddXV), in *International Conference on Learning Representations (ICLR)*, May 2023 (spotlight - notable-top-25%, top 25% of accepted papers, approximately top 8% of submitted papers). [[Proceedings Link]](https://openreview.net/forum?id=IPrzNbddXV) [[Code]](https://github.com/Divyansh03/FedExP)
+- S. Wang, M. Ji, ["A lightweight method for tackling unknown participation statistics in federated averaging"](https://openreview.net/pdf?id=ZKEuFKfCKA), in *International Conference on Learning Representations (ICLR)*, May 2024 (spotlight, 5% of submitted papers). 
+- D. Jhunjhunwala, S. Wang, G. Joshi, ["FedExP: speeding up federated averaging via extrapolation"](https://openreview.net/pdf?id=IPrzNbddXV), in *International Conference on Learning Representations (ICLR)*, May 2023 (spotlight - notable-top-25%, top 25% of accepted papers, approximately top 8% of submitted papers). 
 
 ## 5) Collaboration with industry
 
