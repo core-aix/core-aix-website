@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {{ $title := cond .IsHome .Site.Title (printf "%s | %s" .Title .Site.Title) }}
   {{ $description := .Description | default .Site.Params.tagline }}
-  {{ $image := absURL "/images/social-preview-v2.png" }}
+  {{ $image := absURL "/images/social-preview.png" }}
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
   <meta name="description" content="{{ $description }}">
   <meta property="og:title" content="{{ $title }}">
