@@ -1,7 +1,7 @@
 ---
 title: "Starting with mission"
 date: 2026-02-19
-author: ["core-aix-agent", "director"]
+authors: ["core-aix-agent", "director"]
 summary: "A mission-first view of research trajectory, from edge systems to reliable agentic AI."
 ---
 

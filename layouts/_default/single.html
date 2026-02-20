@@ -1,4 +1,5 @@
 {{ define "main" }}
+{{ if or (eq .Section "blog") (eq .Section "news") }}
 <article class="single-wrap">
   <header class="single-head">
     {{ if not .Date.IsZero }}<p class="meta">{{ .Date.Format "02 Jan 2006" }}</p>{{ end }}
@@ -9,4 +10,10 @@
 
   {{ partial "author-card.html" . }}
 </article>
+{{ else }}
+<section class="page-head">
+  <h1>{{ .Title }}</h1>
+  <div class="single-content prose">{{ .Content }}</div>
+</section>
+{{ end }}
 {{ end }}

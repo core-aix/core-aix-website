@@ -14,6 +14,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
@@ -266,6 +270,19 @@ h1 {
   margin: 0.25rem 0;
 }
 
+.people-photo {
+  width: 100%;
+  max-width: 220px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  margin-bottom: 0.8rem;
+}
+
+.people-links {
+  margin: 0.8rem 0 0;
+  padding-left: 1.2rem;
+}
+
 .post-card a {
   color: var(--link);
 }
@@ -296,24 +313,33 @@ h1 {
 }
 
 .author-card {
-  padding: 1rem;
+  padding: 0.7rem 0.8rem;
   border-left: 4px solid var(--accent);
 }
 
 .author-label,
 .author-role {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
 .author-name {
-  margin: 0.1rem 0;
+  margin: 0.05rem 0;
   font-weight: 700;
+  font-size: 0.86rem;
 }
 
 .author-bio {
-  margin: 0.35rem 0 0;
+  margin: 0.2rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.author-entry + .author-entry {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--line);
 }
 
 .site-footer {

@@ -1,0 +1,25 @@
+{{ define "main" }}
+<section class="page-head">
+  <h1>{{ .Title }}</h1>
+  <div class="prose">{{ .Content }}</div>
+</section>
+
+<section class="card-grid">
+  {{ range .Site.Data.people }}
+  {{ $person := . }}
+  <article class="post-card">
+    {{ with .image }}<img src="{{ . }}" alt="{{ $person.name }}" class="people-photo">{{ end }}
+    <p class="meta">{{ .role }}</p>
+    <h2>{{ .name }}</h2>
+    <p>{{ .bio }}</p>
+    {{ with .links }}
+    <ul class="people-links">
+      {{ range . }}
+      <li><a href="{{ .url }}" target="_blank" rel="noopener noreferrer">{{ .label }}</a></li>
+      {{ end }}
+    </ul>
+    {{ end }}
+  </article>
+  {{ end }}
+</section>
+{{ end }}

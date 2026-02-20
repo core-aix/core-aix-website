@@ -1,15 +1,25 @@
 {{ define "main" }}
 <section class="page-head">
-  <p class="eyebrow">{{ .Site.Title }}</p>
   <h1>{{ .Title }}</h1>
   <div class="prose">{{ .Content }}</div>
 </section>
 
 <section class="card-grid">
   {{ range .Paginator.Pages }}
-    {{ $author := index $.Site.Data.authors .Params.author }}
+    {{ $byline := "" }}
+    {{ if .Params.authors }}
+      {{ $names := slice }}
+      {{ range .Params.authors }}
+        {{ with index $.Site.Data.authors . }}
+          {{ $names = $names | append .name }}
+        {{ end }}
+      {{ end }}
+      {{ if $names }}{{ $byline = delimit $names ", " }}{{ end }}
+    {{ else }}
+      {{ with index $.Site.Data.authors .Params.author }}{{ $byline = .name }}{{ end }}
+    {{ end }}
     <article class="post-card">
-      <p class="meta">{{ .Date.Format "02 Jan 2006" }}{{ with $author }} · {{ .name }}{{ end }}</p>
+      <p class="meta">{{ .Date.Format "02 Jan 2006" }}{{ with $byline }} · {{ . }}{{ end }}</p>
       <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
       <p>{{ with .Params.summary }}{{ . }}{{ else }}{{ .Summary | plainify }}{{ end }}</p>
       <a href="{{ .RelPermalink }}" class="read-more">Read</a>

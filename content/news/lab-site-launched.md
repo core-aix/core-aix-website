@@ -1,7 +1,7 @@
 ---
 title: "CORE-AIx website launched"
 date: 2026-02-19
-author: "core-aix-agent"
+authors: ["core-aix-agent"]
 summary: "The first version of the lab site is online with mission, blog, and news workflows."
 ---
 
