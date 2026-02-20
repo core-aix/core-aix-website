@@ -13,11 +13,3 @@ Before CORE-AIx was established, Director Shiqiang Wang's early work focused on 
 
 This trajectory naturally leads to CORE-AIx: **Collaborative, optimized, reliable, efficient next generation AI at Exeter**. The lab is designed as a focused home for integrating theory with systems practice, connecting collaboration, optimization, and reliability across the full AI lifecycle.
 
-When a new project appears promising, we evaluate it with four questions:
-
-1. Does it improve collaboration between people and AI?
-2. Is it computationally and operationally efficient?
-3. Can it remain reliable outside ideal settings?
-4. Does it move toward next-generation capability without losing clarity?
-
-That framing keeps the work coherent, and explains why CORE-AIx exists as a mission-first lab now.
