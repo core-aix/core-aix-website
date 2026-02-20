@@ -1,9 +1,9 @@
 ---
-title: "Recent Research Topics"
+title: "Current Research Topics"
 url: "/research/"
 ---
 
-Recent work at CORE-AIx is organized around a small set of connected research themes.
+Work at CORE-AIx is organized around a small set of connected research themes.
 
 ![Research topics overview](/images/research/research_areas.png)
 
