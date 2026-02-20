@@ -1,7 +1,8 @@
 {{ define "main" }}
+{{ $parts := split .RawContent "<!--more-->" }}
 <section class="page-head">
   <h1>{{ .Title }}</h1>
-  <div class="prose">{{ .Content }}</div>
+  {{ with index $parts 0 }}<div class="prose">{{ . | markdownify }}</div>{{ end }}
 </section>
 
 <section class="card-grid">
@@ -22,4 +23,10 @@
   </article>
   {{ end }}
 </section>
+
+{{ if gt (len $parts) 1 }}
+<section class="page-head collaborator-note">
+  <div class="prose">{{ index $parts 1 | markdownify }}</div>
+</section>
+{{ end }}
 {{ end }}

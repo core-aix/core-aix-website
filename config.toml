@@ -27,6 +27,11 @@ disableKinds = ["taxonomy", "term"]
   weight = 10
 
 [[menu.main]]
+  name = "Research"
+  url = "/research/"
+  weight = 15
+
+[[menu.main]]
   name = "News"
   url = "/news/"
   weight = 20
