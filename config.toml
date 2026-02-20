@@ -1,4 +1,4 @@
-baseURL = "/"
+baseURL = "https://core-aix.org/"
 languageCode = "en-us"
 title = "CORE-AIx"
 enableRobotsTXT = true
