@@ -119,7 +119,12 @@ h1 {
   margin: 0 0 1rem;
 }
 
-.prose p {
+.prose p,
+.prose li {
+  color: var(--muted);
+}
+
+.prose li::marker {
   color: var(--muted);
 }
 
