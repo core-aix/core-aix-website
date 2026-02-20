@@ -123,6 +123,15 @@ h1 {
   color: var(--muted);
 }
 
+.prose a,
+.prose a:visited {
+  color: var(--link);
+}
+
+.prose a:hover {
+  color: var(--accent);
+}
+
 .hero-art {
   position: relative;
   min-height: 380px;
@@ -199,7 +208,7 @@ h1 {
 
 .panel-head a,
 .read-more {
-  color: var(--accent);
+  color: var(--link);
   text-decoration: none;
   font-weight: 600;
 }
@@ -219,8 +228,15 @@ h1 {
 }
 
 .compact-list a {
-  color: var(--ink);
+  color: var(--link);
   text-decoration: none;
+}
+
+.compact-list a:visited,
+.panel-head a:visited,
+.read-more:visited,
+.post-card a:visited {
+  color: var(--link);
 }
 
 .compact-list a:hover,
@@ -246,7 +262,7 @@ h1 {
 }
 
 .post-card a {
-  color: var(--ink);
+  color: var(--link);
 }
 
 .single-wrap {
