@@ -1,0 +1,47 @@
+{{ define "main" }}
+<section class="hero">
+  <div class="hero-copy">
+    <h1>{{ .Site.Params.tagline }}</h1>
+    <div class="prose">{{ .Content }}</div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="orbit orbit-a"></div>
+    <div class="orbit orbit-b"></div>
+    <div class="logo-shell">
+      <img src="/images/core-aix-logo.png" alt="CORE-AIx logo">
+    </div>
+  </div>
+</section>
+
+<section class="section-grid">
+  <article class="panel">
+    <div class="panel-head">
+      <h2>News</h2>
+      <a href="/news/">View all</a>
+    </div>
+    <ul class="compact-list">
+      {{ range first 3 (where .Site.RegularPages "Section" "news") }}
+      <li>
+        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        <small>{{ .Date.Format "02 Jan 2006" }}</small>
+      </li>
+      {{ end }}
+    </ul>
+  </article>
+
+  <article class="panel">
+    <div class="panel-head">
+      <h2>Blogs</h2>
+      <a href="/blog/">View all</a>
+    </div>
+    <ul class="compact-list">
+      {{ range first 3 (where .Site.RegularPages "Section" "blog") }}
+      <li>
+        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        <small>{{ .Date.Format "02 Jan 2006" }}</small>
+      </li>
+      {{ end }}
+    </ul>
+  </article>
+</section>
+{{ end }}

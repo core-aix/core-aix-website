@@ -1,0 +1,11 @@
+{{ with .Params.author }}
+  {{ $author := index $.Site.Data.authors . }}
+  {{ if $author }}
+  <aside class="author-card">
+    <p class="author-label">Written by</p>
+    <p class="author-name">{{ $author.name }}</p>
+    {{ with $author.role }}<p class="author-role">{{ . }}</p>{{ end }}
+    <p class="author-bio">{{ $author.bio }}</p>
+  </aside>
+  {{ end }}
+{{ end }}

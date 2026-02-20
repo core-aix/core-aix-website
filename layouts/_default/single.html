@@ -1,0 +1,12 @@
+{{ define "main" }}
+<article class="single-wrap">
+  <header class="single-head">
+    {{ if not .Date.IsZero }}<p class="meta">{{ .Date.Format "02 Jan 2006" }}</p>{{ end }}
+    <h1>{{ .Title }}</h1>
+  </header>
+
+  <div class="single-content prose">{{ .Content }}</div>
+
+  {{ partial "author-card.html" . }}
+</article>
+{{ end }}

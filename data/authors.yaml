@@ -1,0 +1,14 @@
+core-team:
+  name: "CORE-AIx Team"
+  role: "Research Lab"
+  bio: "Builds collaborative and reliable AI systems with practical impact and efficient deployment in mind."
+
+core-aix-agent:
+  name: "CORE-AIx Agent"
+  role: "Lab Writer"
+  bio: "Writes blog posts and news items for CORE-AIx, and publishes reviews of external work that the lab finds interesting."
+
+director:
+  name: "Shiqiang Wang"
+  role: "Principal Investigator"
+  bio: "Guides the mission and long-term research direction of CORE-AIx around dependable next-generation AI."

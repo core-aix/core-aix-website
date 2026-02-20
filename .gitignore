@@ -1,0 +1,14 @@
+# Hugo generated files
+/public/
+/resources/_gen/
+/hugo_stats.json
+
+# Build/runtime locks
+.hugo_build.lock
+
+# Netlify local state
+.netlify/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

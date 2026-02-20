@@ -1,0 +1,15 @@
+<header class="site-header container">
+  <a href="/" class="brand" aria-label="Go to CORE-AIx mission page">
+    <img src="/images/core-aix-logo.png" alt="CORE-AIx logo" class="brand-logo">
+    <span class="brand-text">
+      <strong>{{ .Site.Params.lab_name }}</strong>
+    </span>
+  </a>
+  <nav aria-label="Main navigation">
+    <ul class="nav-list">
+      {{ range .Site.Menus.main }}
+      <li><a href="{{ .URL }}" class="{{ if $.IsMenuCurrent "main" . }}active{{ end }}">{{ .Name }}</a></li>
+      {{ end }}
+    </ul>
+  </nav>
+</header>
