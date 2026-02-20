@@ -10,3 +10,4 @@ Beyond mission, our work is organized around three practical dimensions: researc
 
 We study core AI questions at the intersection of intelligence, optimization, and distributed systems. We test ideas under real-world constraints. We also share progress through concise blogs and news updates.
 
+This website is also an experiment where much of the contents, such as research summaries, news, and blogs, as well as the code for the website itself, are produced by AI, with only light human-editing. However, rest assured that the research outputs (e.g., papers) from our lab are mostly written and fully verified by humans 😊
