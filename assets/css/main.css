@@ -146,6 +146,7 @@ h1 {
   min-height: 380px;
   display: grid;
   place-items: center;
+  overflow: hidden;
 }
 
 .logo-shell {
@@ -405,6 +406,20 @@ h1 {
   .hero,
   .section-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero-art {
+    min-height: 320px;
+  }
+
+  .orbit-a {
+    width: min(320px, 82vw);
+    height: min(320px, 82vw);
+  }
+
+  .orbit-b {
+    width: min(420px, 96vw);
+    height: min(420px, 96vw);
   }
 
   .nav-list {
