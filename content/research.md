@@ -5,7 +5,9 @@ url: "/research/"
 
 Recent work at CORE-AIx is organized around a small set of connected research themes.
 
-## 1) Reliable Agentic AI
+![Research topics overview](/images/research/research_areas.png)
+
+## 1) Reliable agentic AI
 
 Reliable agentic AI is a core focus, aimed at systems that remain dependable in practical, high-stakes settings. The emphasis is on long-horizon robustness, constraint-aware planning and execution, and evaluation methods that go beyond single-turn accuracy to assess stability, recoverability, and consistency across full workflows. Work in this area also connects agent design with optimization and distributed-systems principles so that performance and controllability scale together in real deployments.
 
