@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {{ $title := cond .IsHome .Site.Title (printf "%s | %s" .Title .Site.Title) }}
   {{ $description := .Description | default .Site.Params.tagline }}
-  {{ $image := absURL "/images/social-preview.png" }}
-  {{ $twitterImage := absURL "/images/core-aix-logo.png" }}
+  {{ $image := absURL "/images/social-preview-v3.png" }}
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
   <meta name="description" content="{{ $description }}">
   <meta property="og:title" content="{{ $title }}">
@@ -24,8 +23,8 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="{{ $title }}">
   <meta name="twitter:description" content="{{ $description }}">
-  <meta name="twitter:image" content="{{ $twitterImage }}">
-  <meta name="twitter:image:src" content="{{ $twitterImage }}">
+  <meta name="twitter:image" content="{{ $image }}">
+  <meta name="twitter:image:src" content="{{ $image }}">
   <meta name="twitter:image:alt" content="CORE-AIx logo">
   <link rel="icon" type="image/png" href="/images/core-aix-logo.png">
   <link rel="apple-touch-icon" href="/images/core-aix-logo.png">
