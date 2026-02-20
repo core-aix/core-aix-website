@@ -3,8 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {{ $title := cond .IsHome .Site.Title (printf "%s | %s" .Title .Site.Title) }}
+  {{ $description := .Description | default .Site.Params.tagline }}
+  {{ $image := absURL "/images/core-aix-logo.png" }}
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
-  <meta name="description" content="{{ .Site.Params.tagline }}">
+  <meta name="description" content="{{ $description }}">
+  <meta property="og:title" content="{{ $title }}">
+  <meta property="og:description" content="{{ $description }}">
+  <meta property="og:image" content="{{ $image }}">
+  <meta property="og:url" content="{{ .Permalink }}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ $title }}">
+  <meta name="twitter:description" content="{{ $description }}">
+  <meta name="twitter:image" content="{{ $image }}">
   <link rel="icon" type="image/png" href="/images/core-aix-logo.png">
   <link rel="apple-touch-icon" href="/images/core-aix-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
