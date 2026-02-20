@@ -10,5 +10,3 @@ Beyond mission, our work is organized around three practical dimensions: researc
 
 We study core AI questions at the intersection of intelligence, optimization, and distributed systems. We test ideas under real-world constraints. We also share progress through concise blogs and news updates.
 
-This site shares our direction, people, milestones, and areas of interest as the lab grows.
-
