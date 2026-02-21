@@ -12,11 +12,12 @@
     {{ with .image }}<img src="{{ . }}" alt="{{ $person.name }}" class="people-photo">{{ end }}
     <p class="meta">{{ .role }}</p>
     <h2>{{ .name }}</h2>
-    <p>{{ .bio }}</p>
+    <div class="prose">{{ .bio | markdownify }}</div>
     {{ with .links }}
     <ul class="people-links">
       {{ range . }}
-      <li><a href="{{ .url }}" target="_blank" rel="noopener noreferrer">{{ .label }}</a></li>
+      {{ $isExternal := strings.HasPrefix .url "http" }}
+      <li><a href="{{ .url }}"{{ if $isExternal }} target="_blank" rel="noopener noreferrer"{{ end }}>{{ .label }}</a></li>
       {{ end }}
     </ul>
     {{ end }}

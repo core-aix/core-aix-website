@@ -22,7 +22,7 @@
       {{ end }}
       {{ if $names }}{{ $byline = delimit $names ", " }}{{ end }}
     {{ else }}
-      {{ with index $.Site.Data.authors .Params.author }}{{ $byline = .name }}{{ end }}
+      {{ with .Params.author }}{{ with index $.Site.Data.authors . }}{{ $byline = .name }}{{ end }}{{ end }}
     {{ end }}
     <article class="post-card">
       <p class="meta">{{ .Date.Format "02 Jan 2006" }}{{ with $byline }} · {{ . }}{{ end }}</p>

@@ -57,14 +57,15 @@ disableKinds = ["taxonomy", "term"]
   url = "/blog/"
   weight = 30
 
-[[menu.main]]
-  name = "People"
-  url = "/people/"
-  weight = 40
 
 [[menu.main]]
   name = "Publications"
   url = "/publications/"
+  weight = 40
+
+[[menu.main]]
+  name = "People"
+  url = "/people/"
   weight = 50
 
 [[menu.main]]
