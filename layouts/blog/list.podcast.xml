@@ -6,6 +6,8 @@
     {{- $podcastTitle := .Site.Params.podcast.title | default (printf "%s Podcast" .Site.Title) -}}
     {{- $podcastDescription := .Site.Params.podcast.description | default .Site.Params.tagline -}}
     {{- $podcastAuthor := .Site.Params.podcast.author | default .Site.Title -}}
+    {{- $podcastOwnerName := .Site.Params.podcast.owner_name | default $podcastAuthor -}}
+    {{- $podcastOwnerEmail := .Site.Params.podcast.owner_email | default "" -}}
     {{- $podcastLanguage := .Site.Params.podcast.language | default "en-us" -}}
     {{- $podcastCategory := .Site.Params.podcast.category | default "Technology" -}}
     {{- $podcastImage := .Site.Params.podcast.image | default "/images/social-preview-v4.png" -}}
@@ -19,6 +21,12 @@
     <itunes:author>{{ $podcastAuthor }}</itunes:author>
     <itunes:summary>{{ $podcastDescription }}</itunes:summary>
     <itunes:explicit>false</itunes:explicit>
+    {{- if $podcastOwnerEmail }}
+    <itunes:owner>
+      <itunes:name>{{ $podcastOwnerName }}</itunes:name>
+      <itunes:email>{{ $podcastOwnerEmail }}</itunes:email>
+    </itunes:owner>
+    {{- end }}
     <itunes:category text="{{ $podcastCategory }}" />
     <itunes:image href="{{ $podcastImageURL }}" />
     <image>
