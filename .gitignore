@@ -12,3 +12,5 @@
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+session-ses_*.md
