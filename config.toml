@@ -16,10 +16,24 @@ disableKinds = ["taxonomy", "term"]
   lab_full_name = "Collaborative, optimized, reliable & efficient next generation AI at Exeter"
   tagline = "Collaborative, optimized, reliable & efficient next generation AI at Exeter."
 
+  [params.podcast]
+    title = "CORE-AIx Blog Podcast"
+    description = "Audio narration of CORE-AIx blog posts on collaborative, optimized, reliable, and efficient AI systems."
+    author = "CORE-AIx"
+    language = "en-GB"
+    category = "Technology"
+    image = "/images/social-preview-v4.png"
+
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = false
+
+[outputFormats.Podcast]
+  mediaType = "application/rss+xml"
+  baseName = "podcast"
+  isPlainText = false
+  rel = "alternate"
 
 [[menu.main]]
   name = "Home"

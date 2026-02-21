@@ -1,0 +1,50 @@
+{{- printf "<?xml version=\"1.0\" encoding=\"utf-8\"?>" | safeHTML }}
+<rss version="2.0"
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    {{- $podcastTitle := .Site.Params.podcast.title | default (printf "%s Podcast" .Site.Title) -}}
+    {{- $podcastDescription := .Site.Params.podcast.description | default .Site.Params.tagline -}}
+    {{- $podcastAuthor := .Site.Params.podcast.author | default .Site.Title -}}
+    {{- $podcastLanguage := .Site.Params.podcast.language | default "en-us" -}}
+    {{- $podcastCategory := .Site.Params.podcast.category | default "Technology" -}}
+    {{- $podcastImage := .Site.Params.podcast.image | default "/images/social-preview-v4.png" -}}
+    {{- $podcastImageURL := absURL $podcastImage -}}
+    {{- $selfURL := absURL "/blog/podcast.xml" -}}
+
+    <title>{{ $podcastTitle }}</title>
+    <link>{{ .Permalink }}</link>
+    <description>{{ $podcastDescription }}</description>
+    <language>{{ $podcastLanguage }}</language>
+    <itunes:author>{{ $podcastAuthor }}</itunes:author>
+    <itunes:summary>{{ $podcastDescription }}</itunes:summary>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:category text="{{ $podcastCategory }}" />
+    <itunes:image href="{{ $podcastImageURL }}" />
+    <image>
+      <url>{{ $podcastImageURL }}</url>
+      <title>{{ $podcastTitle }}</title>
+      <link>{{ .Permalink }}</link>
+    </image>
+    <atom:link href="{{ $selfURL }}" rel="self" type="application/rss+xml" />
+
+    {{- range .RegularPages.ByDate.Reverse -}}
+      {{- $audioRel := printf "audio/blog/%s.mp3" .File.TranslationBaseName -}}
+      {{- $audioFsPath := printf "static/%s" $audioRel -}}
+      {{- if fileExists $audioFsPath -}}
+        {{- $audioURL := absURL (printf "/%s" $audioRel) -}}
+        {{- $audioStat := os.Stat $audioFsPath -}}
+    <item>
+      <title>{{ .Title }}</title>
+      <link>{{ .Permalink }}</link>
+      <guid isPermaLink="true">{{ .Permalink }}</guid>
+      <description>{{ with .Params.summary }}{{ . }}{{ else }}{{ .Summary | plainify }}{{ end }}</description>
+      <pubDate>{{ .Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
+      <itunes:author>{{ $podcastAuthor }}</itunes:author>
+      <itunes:summary>{{ with .Params.summary }}{{ . }}{{ else }}{{ .Summary | plainify }}{{ end }}</itunes:summary>
+      <enclosure url="{{ $audioURL }}" length="{{ $audioStat.Size }}" type="audio/mpeg" />
+    </item>
+      {{- end -}}
+    {{- end -}}
+  </channel>
+</rss>

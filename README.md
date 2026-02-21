@@ -57,3 +57,28 @@ Each blog post can have a matching MP3 file at `static/audio/blog/<slug>.mp3`.
 Useful flags:
 - `python3 scripts/generate_podcasts.py --dry-run`
 - `python3 scripts/generate_podcasts.py --force`
+
+## 6) RSS feeds (blog, news, podcast)
+
+When deployed at `https://core-aix.org/`, these feeds are available:
+
+- Blog RSS: `https://core-aix.org/blog/index.xml`
+- News RSS: `https://core-aix.org/news/index.xml`
+- Podcast RSS (audio episodes from blog posts with MP3 files): `https://core-aix.org/blog/podcast.xml`
+
+Podcast mapping rule:
+- Blog file `content/blog/my-post.md` expects audio at `static/audio/blog/my-post.mp3`
+- Only posts with matching MP3 files are included in `podcast.xml`
+
+## 7) Publish to podcast platforms
+
+1. Generate and upload episode MP3 files under `static/audio/blog/`.
+2. Deploy the site so `https://core-aix.org/blog/podcast.xml` is public.
+3. Validate your feed (recommended):
+   - Cast Feed Validator: `https://castfeedvalidator.com/`
+4. Submit to directories:
+   - Spotify for Creators (RSS submission)
+   - Apple Podcasts Connect (RSS submission)
+   - YouTube Music (podcast RSS)
+
+Tip: After approval, publishing a new episode is just adding a new blog post + matching MP3 file, then redeploying.

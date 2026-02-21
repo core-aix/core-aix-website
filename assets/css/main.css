@@ -295,6 +295,22 @@ h1 {
   margin: 1.2rem 0;
 }
 
+.feed-links {
+  margin: 0.6rem 0 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+}
+
+.feed-links a,
+.feed-links a:visited {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.feed-links a:hover {
+  color: var(--accent);
+}
+
 .collaborator-note {
   margin-top: 3rem;
 }

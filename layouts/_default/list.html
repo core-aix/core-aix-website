@@ -2,6 +2,12 @@
 <section class="page-head">
   <h1>{{ .Title }}</h1>
   <div class="prose">{{ .Content }}</div>
+  {{ if or (eq .Section "blog") (eq .Section "news") }}
+    <p class="feed-links">
+      <a href="{{ .RelPermalink }}index.xml">RSS feed</a>
+      {{ if eq .Section "blog" }} · <a href="{{ .RelPermalink }}podcast.xml">Podcast feed</a>{{ end }}
+    </p>
+  {{ end }}
 </section>
 
 <section class="card-grid">
