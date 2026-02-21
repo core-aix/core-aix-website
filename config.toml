@@ -13,8 +13,8 @@ disableKinds = ["taxonomy", "term"]
 
 [params]
   lab_name = "CORE-AIx"
-  lab_full_name = "Collaborative, optimized, reliable, efficient next generation AI at Exeter"
-  tagline = "Collaborative, optimized, reliable, efficient next generation AI at Exeter."
+  lab_full_name = "Collaborative, optimized, reliable & efficient next generation AI at Exeter"
+  tagline = "Collaborative, optimized, reliable & efficient next generation AI at Exeter."
 
 [markup]
   [markup.goldmark]

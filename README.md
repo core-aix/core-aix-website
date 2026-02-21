@@ -41,3 +41,19 @@ On Netlify:
 4. Deploy.
 
 Netlify will render all Markdown content through Hugo templates.
+
+## 5) Generate podcast audio for blog posts
+
+Each blog post can have a matching MP3 file at `static/audio/blog/<slug>.mp3`.
+
+1. Set your API key:
+   - `export OPENAI_API_KEY="<your-key>"`
+2. (Optional) choose model/voice:
+   - `export OPENAI_TTS_MODEL="gpt-4o-mini-tts"`
+   - `export OPENAI_TTS_VOICE="alloy"`
+3. Generate audio files:
+   - `python3 scripts/generate_podcasts.py`
+
+Useful flags:
+- `python3 scripts/generate_podcasts.py --dry-run`
+- `python3 scripts/generate_podcasts.py --force`

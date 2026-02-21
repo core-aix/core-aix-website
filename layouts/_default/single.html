@@ -6,6 +6,26 @@
     <h1>{{ .Title }}</h1>
   </header>
 
+  {{ if eq .Section "blog" }}
+  {{ $audioFromFile := printf "audio/blog/%s.mp3" .File.TranslationBaseName }}
+  {{ $audioFromTitle := printf "audio/blog/%s.mp3" (.Title | urlize) }}
+  {{ $audioPath := "" }}
+  {{ if fileExists (printf "static/%s" $audioFromFile) }}
+    {{ $audioPath = printf "/%s" $audioFromFile }}
+  {{ else if fileExists (printf "static/%s" $audioFromTitle) }}
+    {{ $audioPath = printf "/%s" $audioFromTitle }}
+  {{ end }}
+  {{ if $audioPath }}
+  <section class="podcast-player">
+    <p class="podcast-label">Podcast version</p>
+    <p class="podcast-copy">Listen to this blog as a studio-quality narration.</p>
+    <audio class="podcast-audio" controls preload="none" src="{{ $audioPath }}">
+      Your browser does not support audio playback.
+    </audio>
+  </section>
+  {{ end }}
+  {{ end }}
+
   <div class="single-content prose">{{ .Content }}</div>
 
   {{ partial "author-card.html" . }}
