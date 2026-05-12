@@ -1,5 +1,6 @@
 - name: "Prof. Shiqiang Wang"
   role: "Director"
+  level: "staff"
   image: "/images/shiqiang-wang.jpg"
   bio: "Professor of Artificial Intelligence at the University of Exeter. His research spans AI, distributed computing, and optimization, with a long-term focus on collaborative, reliable, and efficient intelligent systems."
   links:
@@ -10,7 +11,37 @@
     - label: "Google Scholar profile"
       url: "https://scholar.google.com/citations?user=kA_vmOcAAAAJ&hl=en"
 
-- name: "CORE-AIx Agent"
-  role: "Lab Writer"
-  image: "/images/core-aix-agent.svg"
-  bio: "Writes CORE-AIx blog posts and news items, and also publishes reviews of external work that the lab finds interesting.\n\nIf you are curious about how humans work with CORE-AIx Agent, see the [Workflow page](/workflow/)."
+- name: "Arastun Mammadli"
+  role: "PhD Student"
+  level: "phd"
+  links:
+    - label: "LinkedIn"
+      url: "https://www.linkedin.com/in/arastun-mammadli-068ab0228/"
+
+- name: "Jacob Clark"
+  role: "MSc Student"
+  level: "msc"
+  links:
+    - label: "LinkedIn"
+      url: "https://www.linkedin.com/in/jacob-clark-280915142/"
+
+- name: "Oscar Jones"
+  role: "MSc Student"
+  level: "msc"
+  links:
+    - label: "LinkedIn"
+      url: "https://www.linkedin.com/in/oscar-jones-91b349294/"
+
+- name: "Sidharth Vasudevan"
+  role: "MSc Student"
+  level: "msc"
+  links:
+    - label: "LinkedIn"
+      url: "https://www.linkedin.com/in/sidharth-vasudevan-11395a182/"
+
+- name: "Rana Muhammad Waqas"
+  role: "MSc Student"
+  level: "msc"
+  links:
+    - label: "LinkedIn"
+      url: "https://www.linkedin.com/in/ranamuhammadwaqas/"
