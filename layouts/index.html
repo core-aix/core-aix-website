@@ -13,24 +13,12 @@
   </div>
 </section>
 
-{{ with .Site.GetPage "/home/featured-research" }}
-<section class="featured-research panel">
+{{ with .Site.GetPage "/home/highlights" }}
+<section class="panel highlights">
   <div class="panel-head">
     <h2>{{ .Title }}</h2>
   </div>
-  <div class="featured-research-copy prose">{{ .Content }}</div>
-  {{ with .Params.youtube_id }}
-  <div class="video-embed">
-    <iframe
-      src="https://www.youtube.com/embed/{{ . }}"
-      title="Featured Research Video"
-      loading="lazy"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      referrerpolicy="strict-origin-when-cross-origin"
-      allowfullscreen>
-    </iframe>
-  </div>
-  {{ end }}
+  <div class="prose highlights-content">{{ .Content }}</div>
 </section>
 {{ end }}
 

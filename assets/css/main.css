@@ -194,12 +194,50 @@ h1 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.featured-research {
+.highlights {
   margin-top: 2.2rem;
 }
 
-.featured-research-copy {
-  margin: 0.3rem 0 1rem;
+.highlight-item + .highlight-item {
+  margin-top: 1.3rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--line);
+}
+
+.highlight-item h3 {
+  margin: 0.15rem 0 0.5rem;
+}
+
+.highlight-item h3 a,
+.highlight-item h3 a:visited {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.highlight-item h3 a:hover {
+  color: var(--accent);
+}
+
+.highlights-content h3 {
+  margin-top: 0.2rem;
+}
+
+.highlights-content hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 1.4rem 0;
+}
+
+.highlights-content iframe {
+  width: 100%;
+  min-height: 360px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.news-highlight-summary {
+  margin: 0 0 0.95rem;
   color: var(--muted);
 }
 
