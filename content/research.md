@@ -13,7 +13,9 @@ Reliable agentic AI is a core focus, aimed at systems that remain dependable in 
 
 Representative papers:
 
-- This is an ongoing direction at CORE-AIx. Publications are forthcoming.
+- S. Wang, H. Woisetschlager, ["Agentic performance at the edge: insights from benchmarking"](https://arxiv.org/abs/2605.10384), in *Workshop on Autonomic and Agentic AI For IoT and Edge Systems (AutoEdge) in Conjunction with MobiSys 2026*, Jun. 2026.
+
+This is an ongoing direction at CORE-AIx. More publications are forthcoming.
 
 ## 2) Efficient and effective LLM inference systems
 
