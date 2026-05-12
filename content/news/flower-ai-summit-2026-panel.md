@@ -8,7 +8,7 @@ home_highlight: true
 youtube_id: "A1bDBNdDaF4"
 ---
 
-At Flower AI Summit 2026, Prof. Shiqiang Wang joined a panel discussion on **"Accelerating the Adoption of FedAI"**, alongside experts from healthcare, finance, and engineering practice. The discussion focused on a central message: the technical foundations for federated AI are increasingly mature, but broad adoption now depends on governance design, legal interoperability, and clearer incentives for organizations and practitioners.
+At Flower AI Summit 2026, Prof. Shiqiang Wang joined a panel discussion on **"Accelerating the Adoption of FedAI"**, alongside experts from healthcare, security, and engineering practice. The discussion focused on a central message: the technical foundations for federated AI are increasingly mature, but broad adoption now depends on governance design, legal interoperability, and clearer incentives for organizations and practitioners.
 
 Across the panel, several recurring barriers emerged. Legal and regulatory complexity remains a major bottleneck, especially when collaboration spans jurisdictions and sectors with different compliance regimes. At the same time, organizational incentives are often misaligned: many teams still frame data as a competitive moat rather than a shared infrastructure for prevention, safety, and system-level efficiency.
 
