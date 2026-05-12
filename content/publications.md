@@ -5,6 +5,8 @@ url: "/publications/"
 
 ### Selected Recent Publications
 
+- S. Wang, H. Woisetschlager, H.-A. Jacobsen, Mingyue Ji, ["Position: let's develop data probes to fundamentally understand how data affects LLM performance"](https://core-aix.org/papers/SW_ICMLPosition2026.pdf), in *International Conference on Machine Learning (ICML)*, Jul. 2026.
+- S. Wang, H. Woisetschlager, ["Agentic performance at the edge: insights from benchmarking"](https://arxiv.org/abs/2605.10384), in *Workshop on Autonomic and Agentic AI For IoT and Edge Systems (AutoEdge) in Conjunction with MobiSys 2026*, Jun. 2026.
 - F. Wu, J. Hu, G. Min, S. Wang, ["Efficient orthogonal fine-tuning with principal subspace adaptation"](https://openreview.net/pdf?id=FSHrinMArK), in *International Conference on Learning Representations (ICLR)*, Apr. 2026.
 - H. Woisetschlager, R. Zhang, S. Wang, H.-A. Jacobsen, ["MESS+: dynamically learned inference-time LLM routing in model zoos with service level guarantees"](https://arxiv.org/abs/2505.19947), in *Annual Conference on Neural Information Processing Systems (NeurIPS)*, Dec. 2025 (acceptance rate: 24.5%).
 - A. Piaseczny, M. K. C. Shisher, S. Wang, C. Brinton, ["RCCDA: adaptive model updates in the presence of concept drift under a constrained resource budget"](https://arxiv.org/abs/2505.24149), in *Annual Conference on Neural Information Processing Systems (NeurIPS)*, Dec. 2025 (acceptance rate: 24.5%).
