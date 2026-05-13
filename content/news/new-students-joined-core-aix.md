@@ -18,6 +18,6 @@ Our new **MSc students** are:
 - [Jacob Clark](https://www.linkedin.com/in/jacob-clark-280915142/)
 - [Oscar Jones](https://www.linkedin.com/in/oscar-jones-91b349294/)
 - [Sidharth Vasudevan](https://www.linkedin.com/in/sidharth-vasudevan-11395a182/)
-- [Rana Muhammad Waqas](https://www.linkedin.com/in/ranamuhammadwaqas/)
+- [Rana Waqas](https://www.linkedin.com/in/ranamuhammadwaqas/)
 
 Together, this group expands the lab's capacity for both foundational and deployment-oriented research, from experimental prototyping to real-world evaluation.
