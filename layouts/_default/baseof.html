@@ -8,18 +8,31 @@
   {{ $image := absURL "/images/social-preview-v4.png" }}
   <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
   <meta name="description" content="{{ $description }}">
+  {{ $isNewsArticle := and .IsPage (eq .Section "news") }}
+  {{ $pageImage := $image }}
+  {{ with .Params.image }}{{ $pageImage = absURL . }}{{ end }}
   <meta property="og:title" content="{{ $title }}">
   <meta property="og:description" content="{{ $description }}">
   <meta property="og:site_name" content="{{ .Site.Title }}">
-  <meta property="og:image" content="{{ $image }}">
-  <meta property="og:image:url" content="{{ $image }}">
-  <meta property="og:image:secure_url" content="{{ $image }}">
+  <meta property="og:image" content="{{ $pageImage }}">
+  <meta property="og:image:url" content="{{ $pageImage }}">
+  <meta property="og:image:secure_url" content="{{ $pageImage }}">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="CORE-AIx logo">
   <meta property="og:url" content="{{ .Permalink }}">
-  <meta property="og:type" content="website">
+  <meta property="og:type" content="{{ if $isNewsArticle }}article{{ else }}website{{ end }}">
+  <link rel="canonical" href="{{ .Permalink }}">
+  {{ if $isNewsArticle }}
+  <meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+  <meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">
+  {{ range .Params.authors }}
+    {{ $authorLabel := . }}
+    {{ with index $.Site.Data.authors . }}{{ $authorLabel = .name }}{{ end }}
+  <meta property="article:author" content="{{ $authorLabel }}">
+  {{ end }}
+  {{ end }}
   {{ partial "citation-meta.html" . }}
   <link rel="alternate" type="application/rss+xml" title="CORE-AIx Blog RSS" href="{{ absURL "/blog/index.xml" }}">
   <link rel="alternate" type="application/rss+xml" title="CORE-AIx News RSS" href="{{ absURL "/news/index.xml" }}">

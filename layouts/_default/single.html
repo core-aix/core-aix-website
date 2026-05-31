@@ -26,6 +26,37 @@
   {{ end }}
   {{ end }}
 
+  {{ if eq .Section "news" }}
+  {{ $pageImage := absURL "/images/social-preview-v4.png" }}
+  {{ with .Params.image }}{{ $pageImage = absURL . }}{{ end }}
+  {{ $authors := slice }}
+  {{ range .Params.authors }}
+    {{ $authorName := . }}
+    {{ with index $.Site.Data.authors . }}{{ $authorName = .name }}{{ end }}
+    {{ $authors = $authors | append (dict "@type" "Person" "name" $authorName) }}
+  {{ end }}
+  {{ if eq (len $authors) 0 }}
+    {{ $authors = $authors | append (dict "@type" "Organization" "name" .Site.Title) }}
+  {{ end }}
+  {{ $newsArticle := dict
+    "@context" "https://schema.org"
+    "@type" "NewsArticle"
+    "headline" .Title
+    "datePublished" (.Date.Format "2006-01-02T15:04:05Z07:00")
+    "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00")
+    "author" $authors
+    "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
+    "url" .Permalink
+    "image" (slice $pageImage)
+    "publisher" (dict
+      "@type" "Organization"
+      "name" .Site.Title
+      "logo" (dict "@type" "ImageObject" "url" (absURL "/images/core-aix-logo.png"))
+    )
+  }}
+  <script type="application/ld+json">{{ $newsArticle | jsonify | safeJS }}</script>
+  {{ end }}
+
   <div class="single-content prose">{{ .Content }}</div>
 
   {{ partial "author-card.html" . }}
