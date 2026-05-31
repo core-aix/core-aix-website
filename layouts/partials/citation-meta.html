@@ -1,0 +1,18 @@
+{{- if and .IsPage (eq .Section "publications") (.Params.pdf) -}}
+  {{- $pdfURL := absURL .Params.pdf -}}
+  <meta name="citation_title" content="{{ .Title }}">
+  {{- range .Params.authors }}
+  <meta name="citation_author" content="{{ . }}">
+  {{- end }}
+  <meta name="citation_publication_date" content="{{ .Date.Format "2006/01/02" }}">
+  <meta name="citation_pdf_url" content="{{ $pdfURL }}">
+  <meta name="citation_abstract_html_url" content="{{ .Permalink }}">
+  {{- $venueType := lower (default "" .Params.venue_type) -}}
+  {{- with .Params.venue }}
+    {{- if eq $venueType "journal" }}
+  <meta name="citation_journal_title" content="{{ . }}">
+    {{- else if eq $venueType "conference" }}
+  <meta name="citation_conference_title" content="{{ . }}">
+    {{- end }}
+  {{- end }}
+{{- end -}}
