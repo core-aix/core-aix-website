@@ -26,4 +26,13 @@
     {{ end }}
   </url>
   {{ end }}
+
+  {{ range readDir "static/papers" }}
+    {{ if and (not .IsDir) (eq (lower (path.Ext .Name)) ".pdf") }}
+  <url>
+    <loc>{{ absURL (printf "papers/%s" .Name) }}</loc>
+    <lastmod>{{ .ModTime.Format "2006-01-02T15:04:05Z07:00" }}</lastmod>
+  </url>
+    {{ end }}
+  {{ end }}
 </urlset>
