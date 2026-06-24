@@ -27,6 +27,10 @@
   </url>
   {{ end }}
 
+  <url>
+    <loc>https://agitrack.core-aix.org/</loc>
+  </url>
+
   {{ range readDir "static/papers" }}
     {{ if and (not .IsDir) (eq (lower (path.Ext .Name)) ".pdf") }}
   <url>
