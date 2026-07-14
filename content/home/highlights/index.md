@@ -4,9 +4,9 @@ headless: true
 ---
 
 
-### [New PhD and MSc students join CORE-AIx](/news/new-students-joined-core-aix/)
+### [Introducing aGiTrack](/blog/introducing-agitrack/)
 
-Welcome one new PhD student and four new MSc students to the lab!
+CORE-AIx introduces [aGiTrack](https://agitrack.core-aix.org), a lab-built tool for tracking and organizing agentic AI progress.
 
 ### [Panel discussion at Flower AI Summit 2026](/news/flower-ai-summit-2026-panel/)
 
