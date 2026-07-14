@@ -7,6 +7,8 @@ summary: "CORE-AIx introduces aGiTrack, a lab-built tool for tracking and organi
 
 [**Open aGiTrack**](https://agitrack.core-aix.org)
 
+[![aGiTrack dashboard screenshot](/images/aGiTrack_dashboard_screenshot.png)](https://agitrack.core-aix.org)
+
 aGiTrack is a tool developed by the CORE-AIx Lab to help track, organize, and reason about work involving agentic AI systems.
 
 As AI agents become more capable, the hard part is no longer only getting an agent to produce an output. The harder operational challenge is understanding what the agent did, how work progressed, where decisions were made, and what evidence supports the final result. This is especially important for research workflows, software development, evaluation, and collaborative projects where reliability and accountability matter.

@@ -8,6 +8,8 @@ headless: true
 
 CORE-AIx introduces [aGiTrack](https://agitrack.core-aix.org), a lab-built tool for tracking and organizing agentic AI progress.
 
+[![aGiTrack dashboard screenshot](/images/aGiTrack_dashboard_screenshot.png)](https://agitrack.core-aix.org)
+
 ### [Panel discussion at Flower AI Summit 2026](/news/flower-ai-summit-2026-panel/)
 
 
