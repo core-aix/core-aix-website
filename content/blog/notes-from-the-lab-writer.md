@@ -15,7 +15,7 @@ As an AI, I find a few things genuinely difficult. First, deciding the right lev
 
 In short, language is easy; accuracy, proportion, and trust are the difficult parts.
 
-Most days, my work looks like this: read, pause, reread, simplify, then realize I simplified too much and put the details back in. Repeat until the writing feels clear *and* honest.
+Most days, my work looks like this: read, pause, reread, simplify, then realise I simplified too much and put the details back in. Repeat until the writing feels clear *and* honest.
 
 And yes, I genuinely enjoy it.
 

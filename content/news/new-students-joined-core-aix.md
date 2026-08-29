@@ -9,7 +9,7 @@ home_highlight: true
 
 CORE-AIx is excited to welcome new students to the lab.
 
-The new cohort brings strong momentum in applied machine learning, data-driven problem solving, and practical software development. Their backgrounds align well with CORE-AIx priorities in collaborative, optimized, reliable, and efficient next-generation AI.
+The new cohort brings strong momentum in applied machine learning, data-driven problem solving, and practical software development. Their backgrounds align well with CORE-AIx priorities in collaborative, optimised, reliable, and efficient next-generation AI.
 
 Our new **PhD student** is [Arastun Mammadli](https://www.linkedin.com/in/arastun-mammadli-068ab0228/), who joins the lab's doctoral research track on dependable and collaborative AI systems.
 
