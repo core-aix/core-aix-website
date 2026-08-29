@@ -14,7 +14,12 @@
 - name: "Arastun Mammadli"
   role: "PhD Student"
   level: "phd"
+  image: "/images/arastun-mammadli.jpg"
   links:
+    - label: "Personal homepage"
+      url: "https://arastun-m.github.io"
+    - label: "Google Scholar profile"
+      url: "https://scholar.google.com/citations?user=KYRT6FcAAAAJ&hl=en"
     - label: "LinkedIn"
       url: "https://www.linkedin.com/in/arastun-mammadli-068ab0228/"
 
