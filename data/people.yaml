@@ -10,6 +10,8 @@
       url: "https://computerscience.exeter.ac.uk/people/profile/index.php?username=sw1245"
     - label: "Google Scholar profile"
       url: "https://scholar.google.com/citations?user=kA_vmOcAAAAJ&hl=en"
+    - label: "LinkedIn"
+      url: "https://www.linkedin.com/in/shiqiang-wang-6990572b/"
 
 - name: "Arastun Mammadli"
   role: "PhD Student"
