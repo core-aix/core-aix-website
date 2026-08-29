@@ -13,12 +13,12 @@ disableKinds = ["taxonomy", "term"]
 
 [params]
   lab_name = "CORE-AIx"
-  lab_full_name = "Collaborative, optimized, reliable & efficient next generation AI at Exeter"
-  tagline = "Collaborative, optimized, reliable & efficient next generation AI at Exeter."
+  lab_full_name = "Collaborative, optimised, reliable & efficient next generation AI at Exeter"
+  tagline = "Collaborative, optimised, reliable & efficient next generation AI at Exeter."
 
   [params.podcast]
     title = "CORE-AIx Blog Podcast"
-    description = "Audio narration of CORE-AIx blog posts on collaborative, optimized, reliable, and efficient AI systems."
+    description = "Audio narration of CORE-AIx blog posts on collaborative, optimised, reliable, and efficient AI systems."
     author = "CORE-AIx"
     owner_name = "CORE-AIx"
     owner_email = "shiqiangwng@gmail.com"
