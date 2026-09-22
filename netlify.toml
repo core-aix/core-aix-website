@@ -5,3 +5,19 @@
 [build.environment]
   HUGO_VERSION = "0.142.0"
   HUGO_ENV = "production"
+
+[dev]
+  framework = "hugo"
+  command = "hugo server --port 1313 --bind 127.0.0.1"
+  targetPort = 1313
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The lecture dashboard is a standalone page under static/, so Hugo copies it
+# straight through. It is kept out of search results on purpose.
+[[headers]]
+  for = "/bandit/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"

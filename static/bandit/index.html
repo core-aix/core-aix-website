@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<title>Bandit game, live</title>
+<link rel="icon" type="image/png" href="/images/core-aix-logo.png">
+<link rel="stylesheet" href="/bandit/dashboard.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-title">
+    <h1>Ten-armed bandit, live</h1>
+    <p id="bar-sub">Session <span id="session-name">l02</span></p>
+  </div>
+  <div class="tallies">
+    <div class="tally"><span class="tally-value" id="count-joined">0</span><span class="tally-label">joined</span></div>
+    <div class="tally"><span class="tally-value" id="count-playing">0</span><span class="tally-label">playing</span></div>
+    <div class="tally"><span class="tally-value" id="count-finished">0</span><span class="tally-label">finished</span></div>
+  </div>
+  <button id="settings-toggle" class="icon-button" type="button" aria-expanded="false">Controls</button>
+</header>
+
+<div id="controls" class="controls" hidden>
+  <label>Session <input id="ctl-session" type="text" value="l02" size="10"></label>
+  <label>Join link <input id="ctl-join" type="url" placeholder="https://your-app.vercel.app" size="34"></label>
+  <label>Pulls <input id="ctl-budget" type="number" min="10" max="1000" step="10" value="100" size="5"></label>
+  <label>Admin key <input id="ctl-key" type="password" size="14" autocomplete="off"></label>
+  <button id="ctl-save" class="ctl-button" type="button">Apply settings</button>
+  <button id="ctl-open" class="ctl-button" type="button">Close joining</button>
+  <button id="ctl-reset" class="ctl-button ctl-danger" type="button">Reset the session</button>
+  <span id="ctl-note" class="ctl-note"></span>
+</div>
+
+<main class="grid">
+
+  <section class="card card-join">
+    <h2 class="card-head">Scan to play</h2>
+    <div id="qr" class="qr" role="img" aria-label="QR code with the link to the game"></div>
+    <p class="join-url" id="join-url">set the join link in Controls</p>
+    <p class="join-hint">Pick any name. The round is <strong id="join-budget">100</strong> pulls.</p>
+  </section>
+
+  <section class="card card-charts">
+    <div class="chart-block">
+      <div class="chart-head">
+        <h2 class="card-head">Average reward per pull</h2>
+        <p class="card-sub">The class against three algorithms, on the same arms each student faced.</p>
+      </div>
+      <div id="legend-reward" class="legend"></div>
+      <div class="chart-holder"><svg id="chart-reward" class="chart" role="img" aria-label="Average reward per pull against pull number"></svg></div>
+    </div>
+    <div class="chart-block">
+      <div class="chart-head">
+        <h2 class="card-head">Share of pulls on the best arm</h2>
+        <p class="card-sub">The quantity the lecture plots for the ten-armed testbed.</p>
+      </div>
+      <div id="legend-optimal" class="legend"></div>
+      <div class="chart-holder"><svg id="chart-optimal" class="chart" role="img" aria-label="Share of pulls on the best arm against pull number"></svg></div>
+    </div>
+    <button id="table-toggle" class="link-button" type="button" aria-expanded="false">Show the numbers</button>
+    <div id="table-view" class="table-view" hidden></div>
+  </section>
+
+  <section class="card card-board">
+    <h2 class="card-head">Leaderboard</h2>
+    <p class="card-sub">Best total reward over the rounds a player has finished.</p>
+    <ol id="board" class="board"></ol>
+    <p class="board-empty" id="board-empty">Nobody has finished a round yet.</p>
+  </section>
+
+</main>
+
+<div id="tooltip" class="tooltip" hidden></div>
+<p class="status" id="status">connecting</p>
+
+<script src="/bandit/qr.js"></script>
+<script src="/bandit/dashboard.js"></script>
+</body>
+</html>

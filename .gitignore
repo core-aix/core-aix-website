@@ -8,6 +8,10 @@
 
 # Netlify local state
 .netlify/
+deno.lock
+
+# Function dependencies, restored by npm install at build time
+node_modules/
 
 # OS/editor noise
 .DS_Store
