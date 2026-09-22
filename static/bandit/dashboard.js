@@ -10,7 +10,7 @@
   var SERIES = [
     { key: 'students', label: 'The class', colour: 'var(--series-students)' },
     { key: 'eps', label: 'Epsilon 0.1', colour: 'var(--series-eps)' },
-    { key: 'ucb', label: 'UCB c=2', colour: 'var(--series-ucb)' },
+    { key: 'ucb', label: 'UCB c=0.7', colour: 'var(--series-ucb)' },
     { key: 'greedy', label: 'Greedy', colour: 'var(--series-greedy)' }
   ];
 
@@ -121,8 +121,9 @@
     el('count-joined').textContent = data.counts.joined;
     el('count-playing').textContent = data.counts.playing;
     el('count-finished').textContent = data.counts.finished;
-    el('join-budget').textContent = data.settings.budget;
-    el('ctl-budget').value = data.settings.budget;
+    el('count-pulls').textContent = data.counts.pulls || 0;
+    el('join-min').textContent = data.minRankedPulls || 10;
+    el('ctl-arms').value = data.settings.k;
     el('ctl-open').textContent = data.settings.open ? 'Close joining' : 'Open joining';
     el('bar-sub').innerHTML = 'Session <span id="session-name">' + escapeHtml(data.session) + '</span>' +
       (data.settings.open ? '' : ', joining closed');
@@ -137,11 +138,12 @@
     list.innerHTML = rows.map(function (row, i) {
       var fresh = !knownNames[row.id];
       knownNames[row.id] = true;
-      return '<li class="' + (fresh ? 'is-new' : '') + '">' +
-        '<span class="rank">' + (i + 1) + '</span>' +
+      var classes = (fresh ? 'is-new' : '') + (row.ranked ? '' : ' is-unranked');
+      return '<li class="' + classes.trim() + '">' +
+        '<span class="rank">' + (row.ranked ? i + 1 : '–') + '</span>' +
         '<span class="who">' + escapeHtml(row.name) + '</span>' +
-        '<span class="opt">' + Math.round(row.optimalFrac * 100) + '% best arm</span>' +
-        '<span class="total">' + row.total.toFixed(1) + '</span>' +
+        '<span class="opt">' + row.pulls + ' pulls</span>' +
+        '<span class="total">' + Math.round(row.avg * 100) + '%</span>' +
         '</li>';
     }).join('');
   }
@@ -178,11 +180,16 @@
       return;
     }
 
-    var budget = data.settings.budget;
-    var window = Math.max(5, Math.round(budget / 12));
+    var steps = curves.steps || curves.students.r.length;
+    var window = Math.max(5, Math.round(steps / 12));
 
     var rewardSeries = SERIES.map(function (s) {
-      return { key: s.key, label: s.label, colour: s.colour, values: smooth(curves[s.key].r, window) };
+      return {
+        key: s.key, label: s.label, colour: s.colour,
+        values: smooth(curves[s.key].r, window).map(function (v) {
+          return v === null ? null : v * 100;
+        })
+      };
     });
     var optimalSeries = SERIES.map(function (s) {
       return {
@@ -192,9 +199,11 @@
     });
 
     drawChart(el('chart-reward'), rewardSeries, {
-      yLabel: 'reward',
-      format: function (v) { return v.toFixed(2); },
-      reference: { value: curves.optimalMean, label: 'best arm' }
+      yLabel: 'per cent',
+      yMin: 0,
+      yMax: 100,
+      format: function (v) { return Math.round(v) + '%'; },
+      reference: { value: 100 * curves.optimalMean, label: 'best arm' }
     });
     drawChart(el('chart-optimal'), optimalSeries, {
       yLabel: 'per cent',
@@ -232,15 +241,18 @@
     };
     var rows = rewardSeries.map(function (s, i) {
       var o = optimalSeries[i];
+      var show = function (v) { return v === null ? '–' : Math.round(v) + '%'; };
       return '<tr><td>' + s.label + '</td>' +
-        '<td>' + (mean(s.values) === null ? '–' : mean(s.values).toFixed(2)) + '</td>' +
-        '<td>' + (last(s.values) === null ? '–' : last(s.values).toFixed(2)) + '</td>' +
-        '<td>' + (last(o.values) === null ? '–' : Math.round(last(o.values)) + '%') + '</td></tr>';
+        '<td>' + show(mean(s.values)) + '</td>' +
+        '<td>' + show(last(s.values)) + '</td>' +
+        '<td>' + show(last(o.values)) + '</td></tr>';
     }).join('');
     el('table-view').innerHTML =
       '<table><caption class="card-sub">Averaged over ' + data.curves.n +
-      ' first rounds.</caption><thead><tr><th>Series</th><th>Mean reward</th>' +
-      '<th>Reward at the end</th><th>Best arm at the end</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      ' first rounds, out to ' + data.curves.steps + ' pulls.</caption>' +
+      '<thead><tr><th>Series</th><th>Paid, mean</th>' +
+      '<th>Paid, at the end</th><th>Best arm, at the end</th></tr></thead><tbody>' +
+      rows + '</tbody></table>';
   }
 
   /* ---------------------------------------------------------------- */
@@ -432,7 +444,7 @@
       saveSettings();
       knownNames = {};
       renderQR();
-      admin('settings', { budget: Number(el('ctl-budget').value) });
+      admin('settings', { k: Number(el('ctl-arms').value) });
       startPolling();
     });
 

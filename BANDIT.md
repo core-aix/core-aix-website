@@ -1,6 +1,7 @@
 # The bandit game backend
 
-The lecture on exploration and exploitation runs a phone game. The players' app
+The lecture on exploration and exploitation runs a three-armed bandit phone
+game. The players' app
 lives in its own repository on Vercel. This repository holds the two pieces that
 stay here, the API and the projector dashboard.
 
@@ -35,6 +36,18 @@ reference agents replayed on that player's own arms. Only the first round counts
 towards the class average, so a second attempt cannot inflate it. The
 leaderboard uses the best round.
 
+A round has no fixed length. A student pulls as often as they like and stops
+when they choose, so a total is not comparable between two students and the
+score is the share of pulls that paid. Ten pulls is the point at which that
+share means anything, so a shorter round still shows its average and sorts under
+the ranked ones. Rounds of different lengths make the class curves ragged, and a
+step is plotted only where enough rounds were still running to say anything
+about the cohort.
+
+Settings carry a version. Raising it makes the next read replace a session
+created under an older shape of the game, and the epoch survives so a phone is
+told to start again rather than losing its identity.
+
 ## Settings
 
 Set `BANDIT_ADMIN_KEY` in the Netlify site environment. Without it the dashboard
@@ -50,6 +63,9 @@ the QR code follows. The same values ride in the query string if that is easier.
 ```
 https://core-aix.org/bandit/?s=l02&join=https://your-app.vercel.app
 ```
+
+Controls also sets the number of arms, which the phones pick up on their next
+round without a redeploy.
 
 ## Running it locally
 

@@ -219,6 +219,7 @@ h1, h2 { margin: 0; letter-spacing: -0.01em; }
 .board .opt { color: var(--muted); font-size: 0.8em; font-variant-numeric: tabular-nums; }
 .board .total { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; }
 .board li.is-new { animation: lift 900ms ease-out; }
+.board li.is-unranked { opacity: 0.55; }
 @keyframes lift { from { background: rgba(57, 199, 165, 0.16); } to { background: transparent; } }
 .board-empty { color: var(--muted); font-size: 0.85rem; }
 

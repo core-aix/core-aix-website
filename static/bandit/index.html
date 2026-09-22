@@ -13,13 +13,14 @@
 
 <header class="bar">
   <div class="bar-title">
-    <h1>Ten-armed bandit, live</h1>
+    <h1>Three-armed bandit, live</h1>
     <p id="bar-sub">Session <span id="session-name">l02</span></p>
   </div>
   <div class="tallies">
     <div class="tally"><span class="tally-value" id="count-joined">0</span><span class="tally-label">joined</span></div>
     <div class="tally"><span class="tally-value" id="count-playing">0</span><span class="tally-label">playing</span></div>
     <div class="tally"><span class="tally-value" id="count-finished">0</span><span class="tally-label">finished</span></div>
+    <div class="tally"><span class="tally-value" id="count-pulls">0</span><span class="tally-label">pulls</span></div>
   </div>
   <button id="settings-toggle" class="icon-button" type="button" aria-expanded="false">Controls</button>
 </header>
@@ -27,7 +28,7 @@
 <div id="controls" class="controls" hidden>
   <label>Session <input id="ctl-session" type="text" value="l02" size="10"></label>
   <label>Join link <input id="ctl-join" type="url" placeholder="https://your-app.vercel.app" size="34"></label>
-  <label>Pulls <input id="ctl-budget" type="number" min="10" max="1000" step="10" value="100" size="5"></label>
+  <label>Arms <input id="ctl-arms" type="number" min="2" max="12" step="1" value="3" size="3"></label>
   <label>Admin key <input id="ctl-key" type="password" size="14" autocomplete="off"></label>
   <button id="ctl-save" class="ctl-button" type="button">Apply settings</button>
   <button id="ctl-open" class="ctl-button" type="button">Close joining</button>
@@ -41,22 +42,23 @@
     <h2 class="card-head">Scan to play</h2>
     <div id="qr" class="qr" role="img" aria-label="QR code with the link to the game"></div>
     <p class="join-url" id="join-url">set the join link in Controls</p>
-    <p class="join-hint">Pick any name. The round is <strong id="join-budget">100</strong> pulls.</p>
+    <p class="join-hint">Pick any name, pull as often as you like, and stop when
+      you choose. <strong id="join-min">10</strong> pulls puts you on the board.</p>
   </section>
 
   <section class="card card-charts">
     <div class="chart-block">
       <div class="chart-head">
-        <h2 class="card-head">Average reward per pull</h2>
+        <h2 class="card-head">Share of pulls that paid</h2>
         <p class="card-sub">The class against three algorithms, on the same arms each student faced.</p>
       </div>
       <div id="legend-reward" class="legend"></div>
-      <div class="chart-holder"><svg id="chart-reward" class="chart" role="img" aria-label="Average reward per pull against pull number"></svg></div>
+      <div class="chart-holder"><svg id="chart-reward" class="chart" role="img" aria-label="Share of pulls that paid against pull number"></svg></div>
     </div>
     <div class="chart-block">
       <div class="chart-head">
         <h2 class="card-head">Share of pulls on the best arm</h2>
-        <p class="card-sub">The quantity the lecture plots for the ten-armed testbed.</p>
+        <p class="card-sub">The quantity the lecture plots for its own testbed.</p>
       </div>
       <div id="legend-optimal" class="legend"></div>
       <div class="chart-holder"><svg id="chart-optimal" class="chart" role="img" aria-label="Share of pulls on the best arm against pull number"></svg></div>
@@ -67,7 +69,7 @@
 
   <section class="card card-board">
     <h2 class="card-head">Leaderboard</h2>
-    <p class="card-sub">Best total reward over the rounds a player has finished.</p>
+    <p class="card-sub">Share of pulls that paid, over the rounds a player has finished.</p>
     <ol id="board" class="board"></ol>
     <p class="board-empty" id="board-empty">Nobody has finished a round yet.</p>
   </section>

@@ -1,5 +1,5 @@
 /**
- * Live statistics backend for the ten-armed bandit game used in the lecture.
+ * Live statistics backend for the three-armed bandit game used in the lecture.
  *
  * Endpoints, all under /api/bandit:
  *
@@ -21,10 +21,20 @@ const STORE = 'bandit-game';
 const MAX_PLAYERS = 500;
 const MAX_NAME = 18;
 const MAX_BODY = 96 * 1024;
-const MAX_STEPS = 1000;
+const MAX_STEPS = 400;
 const CACHE_MS = 1200;
 
-const DEFAULT_SETTINGS = { k: 10, budget: 100, open: true, epoch: 1 };
+/* A round has no fixed length, so a score is the share of pulls that paid and
+ * a total is not comparable between two players. Ten pulls is the point at
+ * which that share means anything, and a shorter round is listed under the
+ * ranked ones rather than above them. */
+const MIN_RANKED_PULLS = 10;
+
+const DEFAULT_SETTINGS = { k: 3, open: true, epoch: 1 };
+/* Raised whenever the shape of a session changes, so a session created under
+ * the old game does not serve stale settings to a phone. The epoch survives,
+ * because it is what tells a phone to start again. */
+const SETTINGS_VERSION = 2;
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -93,17 +103,17 @@ function firstRound(raw) {
   if (!c) return null;
   const base = raw.base && typeof raw.base === 'object' ? raw.base : {};
   const out = {
-    k: num(raw.k, 2, 64, 10),
-    budget: c.r.length,
-    total: num(raw.total, -1e6, 1e6, 0),
+    k: num(raw.k, 2, 64, 3),
+    pulls: Math.round(num(raw.pulls, 1, 1e6, c.r.length)),
+    avg: num(raw.avg, 0, 1, 0),
     optimalFrac: num(raw.optimalFrac, 0, 1, 0),
-    optimalMean: num(raw.optimalMean, -20, 20, 0),
+    optimalMean: num(raw.optimalMean, 0, 1, 0),
     curve: c,
     base: {},
   };
   for (const key of ['eps', 'ucb', 'greedy']) {
     const b = curve(base[key]);
-    if (b && b.r.length === out.budget) out.base[key] = b;
+    if (b && b.r.length === c.r.length) out.base[key] = b;
   }
   return out;
 }
@@ -111,22 +121,34 @@ function firstRound(raw) {
 function liveState(raw) {
   if (!raw || typeof raw !== 'object') return null;
   return {
-    k: num(raw.k, 2, 64, 10),
-    budget: num(raw.budget, 1, MAX_STEPS, 100),
-    pulls: num(raw.pulls, 0, MAX_STEPS, 0),
-    total: num(raw.total, -1e6, 1e6, 0),
-    optimalPulls: num(raw.optimalPulls, 0, MAX_STEPS, 0),
+    k: Math.round(num(raw.k, 2, 64, 3)),
+    pulls: Math.round(num(raw.pulls, 0, 1e6, 0)),
+    wins: Math.round(num(raw.wins, 0, 1e6, 0)),
+    optimalPulls: Math.round(num(raw.optimalPulls, 0, 1e6, 0)),
     finished: raw.finished === true,
   };
 }
 
 function bestState(raw) {
   if (!raw || typeof raw !== 'object') return null;
+  const pulls = Math.round(num(raw.pulls, 1, 1e6, 1));
   return {
-    total: num(raw.total, -1e6, 1e6, 0),
+    avg: num(raw.avg, 0, 1, 0),
+    wins: Math.round(num(raw.wins, 0, 1e6, 0)),
+    pulls,
     optimalFrac: num(raw.optimalFrac, 0, 1, 0),
-    budget: num(raw.budget, 1, MAX_STEPS, 100),
   };
+}
+
+/* A ranked round always beats an unranked one, then the higher share of pulls
+ * paid, then the longer round. The same order the phone applies to itself. */
+function betterScore(candidate, current) {
+  if (!current) return true;
+  const a = candidate.pulls >= MIN_RANKED_PULLS;
+  const b = current.pulls >= MIN_RANKED_PULLS;
+  if (a !== b) return a;
+  if (candidate.avg !== current.avg) return candidate.avg > current.avg;
+  return candidate.pulls > current.pulls;
 }
 
 const randomId = (n = 12) => {
@@ -148,17 +170,18 @@ const playerKey = (session, epoch, id) => `${playerPrefix(session, epoch)}${id}`
 async function readSettings(session) {
   const blobs = store();
   const found = await blobs.get(settingsKey(session), { type: 'json' });
-  if (found && typeof found === 'object') {
+  if (found && typeof found === 'object' && found.v === SETTINGS_VERSION) {
     return {
-      k: num(found.k, 2, 32, DEFAULT_SETTINGS.k),
-      budget: num(found.budget, 10, MAX_STEPS, DEFAULT_SETTINGS.budget),
+      k: Math.round(num(found.k, 2, 32, DEFAULT_SETTINGS.k)),
       open: found.open !== false,
       epoch: num(found.epoch, 1, 1e9, 1),
     };
   }
-  const fresh = { ...DEFAULT_SETTINGS, createdAt: Date.now() };
+  const epoch = found && typeof found === 'object'
+    ? num(found.epoch, 1, 1e9, 1) : 1;
+  const fresh = { ...DEFAULT_SETTINGS, epoch, v: SETTINGS_VERSION, createdAt: Date.now() };
   await blobs.setJSON(settingsKey(session), fresh);
-  return { k: fresh.k, budget: fresh.budget, open: fresh.open, epoch: fresh.epoch };
+  return { k: fresh.k, open: fresh.open, epoch: fresh.epoch };
 }
 
 async function listPlayers(session, epoch) {
@@ -178,59 +201,64 @@ async function listPlayers(session, epoch) {
 
 const cache = new Map();
 
-function meanCurves(players, budget) {
-  const zeros = () => new Float64Array(budget);
-  const acc = {
-    students: { r: zeros(), o: zeros(), n: zeros() },
-    eps: { r: zeros(), o: zeros(), n: zeros() },
-    ucb: { r: zeros(), o: zeros(), n: zeros() },
-    greedy: { r: zeros(), o: zeros(), n: zeros() },
-  };
-  let optimalMean = 0;
-  let counted = 0;
+function meanCurves(players) {
+  const contributors = players.filter((p) => p.first && p.first.curve);
+  const blank = { n: 0, steps: 0, optimalMean: 0 };
+  for (const key of ['students', 'eps', 'ucb', 'greedy']) blank[key] = { r: [], o: [] };
+  if (!contributors.length) return blank;
 
-  for (const player of players) {
+  const steps = Math.min(
+    MAX_STEPS,
+    Math.max(...contributors.map((p) => p.first.curve.r.length)),
+  );
+  const zeros = () => new Float64Array(steps);
+  const acc = {};
+  for (const key of ['students', 'eps', 'ucb', 'greedy']) {
+    acc[key] = { r: zeros(), o: zeros(), n: zeros() };
+  }
+  let optimalMean = 0;
+
+  for (const player of contributors) {
     const first = player.first;
-    if (!first || !first.curve) continue;
-    counted += 1;
     optimalMean += first.optimalMean || 0;
-    const steps = Math.min(budget, first.curve.r.length);
-    for (let t = 0; t < steps; t += 1) {
-      acc.students.r[t] += first.curve.r[t];
-      acc.students.o[t] += first.curve.o[t];
-      acc.students.n[t] += 1;
-    }
-    for (const key of ['eps', 'ucb', 'greedy']) {
-      const b = first.base && first.base[key];
-      if (!b) continue;
-      const n = Math.min(budget, b.r.length);
+    const add = (slot, source) => {
+      const n = Math.min(steps, source.r.length);
       for (let t = 0; t < n; t += 1) {
-        acc[key].r[t] += b.r[t];
-        acc[key].o[t] += b.o[t];
-        acc[key].n[t] += 1;
+        slot.r[t] += source.r[t];
+        slot.o[t] += source.o[t];
+        slot.n[t] += 1;
       }
+    };
+    add(acc.students, first.curve);
+    for (const key of ['eps', 'ucb', 'greedy']) {
+      if (first.base && first.base[key]) add(acc[key], first.base[key]);
     }
   }
 
+  /* A step reached by three players out of forty says nothing about the class,
+   * so the tail is cut where too few rounds are still running. A small class
+   * keeps everybody, since a floor above the class size would plot nothing. */
+  const n = contributors.length;
+  const floor = Math.max(1, Math.min(5, n), Math.ceil(0.35 * n));
   const finish = (slot) => {
     const r = [];
     const o = [];
-    for (let t = 0; t < budget; t += 1) {
+    for (let t = 0; t < steps; t += 1) {
       const n = slot.n[t];
-      r.push(n ? Math.round((slot.r[t] / n) * 1000) / 1000 : null);
-      o.push(n ? Math.round((slot.o[t] / n) * 1000) / 1000 : null);
+      const enough = n >= floor;
+      r.push(enough ? Math.round((slot.r[t] / n) * 1000) / 1000 : null);
+      o.push(enough ? Math.round((slot.o[t] / n) * 1000) / 1000 : null);
     }
     return { r, o };
   };
 
-  return {
-    n: counted,
-    optimalMean: counted ? Math.round((optimalMean / counted) * 1000) / 1000 : 0,
-    students: finish(acc.students),
-    eps: finish(acc.eps),
-    ucb: finish(acc.ucb),
-    greedy: finish(acc.greedy),
+  const out = {
+    n: contributors.length,
+    steps,
+    optimalMean: Math.round((optimalMean / contributors.length) * 1000) / 1000,
   };
+  for (const key of ['students', 'eps', 'ucb', 'greedy']) out[key] = finish(acc[key]);
+  return out;
 }
 
 async function board(session, full, limit) {
@@ -252,33 +280,46 @@ async function board(session, full, limit) {
       scored.push({
         id: player.id,
         name: player.name,
-        total: player.best.total,
+        avg: player.best.avg,
+        wins: player.best.wins,
+        pulls: player.best.pulls,
         optimalFrac: player.best.optimalFrac,
+        ranked: player.best.pulls >= MIN_RANKED_PULLS,
         rounds: player.rounds || 1,
       });
-      const bin = Math.min(10, Math.max(0, Math.round(player.best.optimalFrac * 10)));
-      histogram[bin] += 1;
+      if (player.best.pulls >= MIN_RANKED_PULLS) {
+        const bin = Math.min(10, Math.max(0, Math.round(player.best.optimalFrac * 10)));
+        histogram[bin] += 1;
+      }
     } else if (player.live && player.live.pulls > 0) {
       playing += 1;
     }
   }
-  scored.sort((a, b) => b.total - a.total);
+  scored.sort((a, b) => {
+    if (a.ranked !== b.ranked) return a.ranked ? -1 : 1;
+    if (b.avg !== a.avg) return b.avg - a.avg;
+    return b.pulls - a.pulls;
+  });
+
+  const pulled = players.reduce(
+    (sum, p) => sum + ((p.best && p.best.pulls) || (p.live && p.live.pulls) || 0), 0);
 
   const data = {
     session,
     epoch: settings.epoch,
     settings,
-    counts: { joined: players.length, playing, finished },
+    minRankedPulls: MIN_RANKED_PULLS,
+    counts: { joined: players.length, playing, finished, pulls: pulled },
     leaderboard: scored.slice(0, limit),
     histogram,
     updatedAt: Date.now(),
   };
 
   if (full) {
-    data.curves = meanCurves(players, settings.budget);
+    data.curves = meanCurves(players);
     data.live = players
       .filter((p) => p.live && p.live.pulls > 0 && !p.best)
-      .map((p) => ({ name: p.name, pulls: p.live.pulls, budget: p.live.budget }))
+      .map((p) => ({ name: p.name, pulls: p.live.pulls }))
       .sort((a, b) => b.pulls - a.pulls)
       .slice(0, 40);
   }
@@ -374,7 +415,7 @@ export default async function handler(req) {
         rounds: Math.max(existing.rounds || 0, Math.round(num(body.rounds, 0, 10000, 0))),
         live: liveState(body.live) || existing.live,
       };
-      if (incomingBest && (!existing.best || incomingBest.total > existing.best.total)) {
+      if (incomingBest && betterScore(incomingBest, existing.best)) {
         record.best = incomingBest;
       }
       if (!existing.first && body.first) {
@@ -394,7 +435,7 @@ export default async function handler(req) {
 
       if (body.action === 'reset') {
         const nextEpoch = settings.epoch + 1;
-        const updated = { ...settings, epoch: nextEpoch };
+        const updated = { ...settings, epoch: nextEpoch, v: SETTINGS_VERSION };
         await blobs.setJSON(settingsKey(session), updated);
         cache.clear();
         /* Old rounds are cleared afterwards, since the epoch already hides them. */
@@ -409,9 +450,9 @@ export default async function handler(req) {
         const patch = body.settings || {};
         const updated = {
           k: Math.round(num(patch.k, 2, 32, settings.k)),
-          budget: Math.round(num(patch.budget, 10, MAX_STEPS, settings.budget)),
           open: patch.open === undefined ? settings.open : patch.open !== false,
           epoch: settings.epoch,
+          v: SETTINGS_VERSION,
         };
         await blobs.setJSON(settingsKey(session), updated);
         cache.clear();
