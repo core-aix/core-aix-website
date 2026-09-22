@@ -20,6 +20,7 @@
   var latest = null;
   var knownNames = {};
   var timer = null;
+  var view = 'live';
 
   /* ---------------------------------------------------------------- */
   /* Settings                                                           */
@@ -92,8 +93,11 @@
   /* ---------------------------------------------------------------- */
 
   function poll() {
-    fetch(API + '/board?session=' + encodeURIComponent(settings.session) + '&full=1&limit=12',
-      { headers: { accept: 'application/json' } })
+    /* The curves and the arm split ride only on the reveal request, so the
+     * live page is not holding the answer in memory while the class plays. */
+    var url = API + '/board?session=' + encodeURIComponent(settings.session) +
+      '&limit=10' + (view === 'reveal' ? '&full=1' : '');
+    fetch(url, { headers: { accept: 'application/json' } })
       .then(function (res) { return res.json(); })
       .then(function (data) {
         if (data && data.error) throw new Error(data.error);
@@ -117,10 +121,7 @@
   /* ---------------------------------------------------------------- */
 
   function render(data) {
-    el('session-name').textContent = data.session;
     el('count-joined').textContent = data.counts.joined;
-    el('count-playing').textContent = data.counts.playing;
-    el('count-finished').textContent = data.counts.finished;
     el('count-pulls').textContent = data.counts.pulls || 0;
     el('join-min').textContent = data.minRankedPulls || 10;
     el('ctl-arms').value = data.settings.k;
@@ -128,8 +129,42 @@
     el('bar-sub').innerHTML = 'Session <span id="session-name">' + escapeHtml(data.session) + '</span>' +
       (data.settings.open ? '' : ', joining closed');
 
+    var pulls = data.counts.pulls || 0;
+    el('hero-paid').textContent = pulls ? Math.round(100 * data.counts.paid) + '%' : '–';
+    el('hero-sub').textContent = pulls
+      ? (data.counts.wins || 0).toLocaleString('en-GB') + ' wins from ' +
+        pulls.toLocaleString('en-GB') + ' pulls'
+      : 'of every pull, so far';
+
     renderBoard(data.leaderboard);
-    renderCharts(data);
+    if (view === 'reveal') {
+      renderArms(data.arms || []);
+      renderCharts(data);
+    }
+  }
+
+  /* The per arm split, which is the answer to the game. */
+  function renderArms(arms) {
+    var host = el('arms-split');
+    if (!arms.length) {
+      host.innerHTML = '<p class="card-sub">Nobody has pulled an arm yet.</p>';
+      el('arms-note').textContent = '';
+      return;
+    }
+    var top = Math.max.apply(null, arms.map(function (a) { return a.share; })) || 1;
+    host.innerHTML = arms.map(function (a, i) {
+      var best = i === 0;
+      return '<div class="arm-split' + (best ? ' is-best' : '') + '">' +
+        '<span class="arm-split-rate">pays ' + Math.round(100 * a.rate) + '%</span>' +
+        '<span class="arm-split-track"><span class="arm-split-fill" style="width:' +
+        (100 * a.share / top).toFixed(1) + '%"></span></span>' +
+        '<span class="arm-split-share">' + Math.round(100 * a.share) + '%</span>' +
+        '</div>';
+    }).join('');
+    var bestShare = Math.round(100 * arms[0].share);
+    el('arms-note').textContent = 'The class sent ' + bestShare +
+      ' per cent of its pulls to the best arm. Pulling at random would send ' +
+      Math.round(100 / arms.length) + ' per cent.';
   }
 
   function renderBoard(rows) {
@@ -138,7 +173,8 @@
     list.innerHTML = rows.map(function (row, i) {
       var fresh = !knownNames[row.id];
       knownNames[row.id] = true;
-      var classes = (fresh ? 'is-new' : '') + (row.ranked ? '' : ' is-unranked');
+      var classes = (fresh ? 'is-new' : '') + (row.ranked ? '' : ' is-unranked') +
+        (row.playing ? ' is-playing' : '');
       return '<li class="' + classes.trim() + '">' +
         '<span class="rank">' + (row.ranked ? i + 1 : '–') + '</span>' +
         '<span class="who">' + escapeHtml(row.name) + '</span>' +
@@ -427,6 +463,17 @@
   }
 
   function wireControls() {
+    el('reveal-toggle').addEventListener('click', function () {
+      view = view === 'live' ? 'reveal' : 'live';
+      var revealing = view === 'reveal';
+      el('view-live').hidden = revealing;
+      el('view-reveal').hidden = !revealing;
+      this.textContent = revealing ? 'Back to the live board' : 'Reveal the results';
+      this.classList.toggle('is-primary', !revealing);
+      this.setAttribute('aria-expanded', String(revealing));
+      poll();
+    });
+
     el('settings-toggle').addEventListener('click', function () {
       var panel = el('controls');
       panel.hidden = !panel.hidden;

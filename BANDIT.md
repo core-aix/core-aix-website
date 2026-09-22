@@ -60,6 +60,17 @@ once and holds it in `localStorage`.
 carries `noindex`. Open Controls, set the session name and the Vercel link, and
 the QR code follows. The same values ride in the query string if that is easier.
 
+The page has two views. The live one carries the QR code, the share of the
+class's pulls that paid, and the leaderboard, which ranks a round still in
+progress alongside a finished one so the board fills as the room plays. Nothing
+on it names an arm or a pay rate.
+
+**Reveal the results** switches to the second view, which carries the pay rates,
+where the class put its pulls, and the curves against greedy, epsilon-greedy and
+UCB. A room that can see the pay rates has been handed the game, so the live
+view never even requests them. The curves and the arm split ride only on a
+request carrying `full=1`, which only the reveal view makes.
+
 ```
 https://core-aix.org/bandit/?s=l02&join=https://your-app.vercel.app
 ```

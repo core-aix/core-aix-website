@@ -13,15 +13,14 @@
 
 <header class="bar">
   <div class="bar-title">
-    <h1>Three-armed bandit, live</h1>
+    <h1>Three-armed bandit</h1>
     <p id="bar-sub">Session <span id="session-name">l02</span></p>
   </div>
   <div class="tallies">
-    <div class="tally"><span class="tally-value" id="count-joined">0</span><span class="tally-label">joined</span></div>
-    <div class="tally"><span class="tally-value" id="count-playing">0</span><span class="tally-label">playing</span></div>
-    <div class="tally"><span class="tally-value" id="count-finished">0</span><span class="tally-label">finished</span></div>
+    <div class="tally"><span class="tally-value" id="count-joined">0</span><span class="tally-label">playing</span></div>
     <div class="tally"><span class="tally-value" id="count-pulls">0</span><span class="tally-label">pulls</span></div>
   </div>
+  <button id="reveal-toggle" class="icon-button is-primary" type="button" aria-expanded="false">Reveal the results</button>
   <button id="settings-toggle" class="icon-button" type="button" aria-expanded="false">Controls</button>
 </header>
 
@@ -36,14 +35,47 @@
   <span id="ctl-note" class="ctl-note"></span>
 </div>
 
-<main class="grid">
+<!-- ------------------------------------------------------------------ -->
+<!-- The live page. Nothing here names an arm or a pay rate.             -->
+<!-- ------------------------------------------------------------------ -->
+<main id="view-live" class="grid grid-live">
 
-  <section class="card card-join">
-    <h2 class="card-head">Scan to play</h2>
-    <div id="qr" class="qr" role="img" aria-label="QR code with the link to the game"></div>
-    <p class="join-url" id="join-url">set the join link in Controls</p>
-    <p class="join-hint">Pick any name, pull as often as you like, and stop when
-      you choose. <strong id="join-min">10</strong> pulls puts you on the board.</p>
+  <div class="stack">
+    <section class="card card-join">
+      <h2 class="card-head">Scan to play</h2>
+      <div id="qr" class="qr" role="img" aria-label="QR code with the link to the game"></div>
+      <p class="join-url" id="join-url">set the join link in Controls</p>
+      <p class="join-hint">Pick any name, pull as often as you like, and stop when
+        you choose. <strong id="join-min">10</strong> pulls puts you on the board.</p>
+    </section>
+
+    <section class="card card-rate">
+      <h2 class="card-head">The class is winning</h2>
+      <p class="hero" id="hero-paid">&ndash;</p>
+      <p class="hero-sub" id="hero-sub">of every pull, so far</p>
+    </section>
+  </div>
+
+  <section class="card card-board">
+    <h2 class="card-head">Leaderboard</h2>
+    <p class="card-sub">Share of pulls that paid. A round still running counts.</p>
+    <ol id="board" class="board"></ol>
+    <p class="board-empty" id="board-empty">Nobody has pulled an arm yet.</p>
+  </section>
+
+</main>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- The reveal. Shown only when the lecturer asks for it.               -->
+<!-- ------------------------------------------------------------------ -->
+<main id="view-reveal" class="grid grid-reveal" hidden>
+
+  <section class="card card-arms">
+    <h2 class="card-head">What the arms were paying</h2>
+    <p class="card-sub">Every student had the same three pay rates in a different
+      order. This is where the whole class put its pulls.</p>
+    <div id="arms-split" class="arms-split"></div>
+    <p class="card-sub" id="arms-note"></p>
   </section>
 
   <section class="card card-charts">
@@ -65,13 +97,6 @@
     </div>
     <button id="table-toggle" class="link-button" type="button" aria-expanded="false">Show the numbers</button>
     <div id="table-view" class="table-view" hidden></div>
-  </section>
-
-  <section class="card card-board">
-    <h2 class="card-head">Leaderboard</h2>
-    <p class="card-sub">Share of pulls that paid, over the rounds a player has finished.</p>
-    <ol id="board" class="board"></ol>
-    <p class="board-empty" id="board-empty">Nobody has finished a round yet.</p>
   </section>
 
 </main>

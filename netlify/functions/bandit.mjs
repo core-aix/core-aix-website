@@ -129,6 +129,54 @@ function liveState(raw) {
   };
 }
 
+/* Everything one phone has pulled, across rounds. The class tally adds these
+ * up, so it climbs through the activity instead of dropping back whenever a
+ * student starts again. */
+function totalsState(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const rows = Array.isArray(raw.byRate) ? raw.byRate.slice(0, 64) : [];
+  return {
+    pulls: Math.round(num(raw.pulls, 0, 1e7, 0)),
+    wins: Math.round(num(raw.wins, 0, 1e7, 0)),
+    byRate: rows.map((row) => ({
+      rate: Math.round(num(row && row.rate, 0, 1, 0) * 1000) / 1000,
+      pulls: Math.round(num(row && row.pulls, 0, 1e7, 0)),
+      wins: Math.round(num(row && row.wins, 0, 1e7, 0)),
+    })),
+  };
+}
+
+/* The class split by the arm's true pay rate, not by its number, because the
+ * arms are dealt in a different order to every student. This is the one
+ * answer the dashboard has to keep off the live page, since a room that can
+ * see the pay rates has been handed the game, so it rides only on a request
+ * that asks for it. */
+function armSplit(players) {
+  const byRate = new Map();
+  let total = 0;
+  for (const player of players) {
+    const rows = player.totals && player.totals.byRate;
+    if (!Array.isArray(rows)) continue;
+    for (const row of rows) {
+      const key = row.rate.toFixed(3);
+      const acc = byRate.get(key) || { rate: row.rate, pulls: 0, wins: 0 };
+      acc.pulls += row.pulls;
+      acc.wins += row.wins;
+      byRate.set(key, acc);
+      total += row.pulls;
+    }
+  }
+  return [...byRate.values()]
+    .sort((a, b) => b.rate - a.rate)
+    .map((a) => ({
+      rate: a.rate,
+      pulls: a.pulls,
+      wins: a.wins,
+      share: total ? Math.round((a.pulls / total) * 1000) / 1000 : 0,
+      paid: a.pulls ? Math.round((a.wins / a.pulls) * 1000) / 1000 : 0,
+    }));
+}
+
 function bestState(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const pulls = Math.round(num(raw.pulls, 1, 1e6, 1));
@@ -273,26 +321,47 @@ async function board(session, full, limit) {
   let finished = 0;
   const scored = [];
   const histogram = new Array(11).fill(0);
+  const round3 = (x) => Math.round(x * 1000) / 1000;
 
   for (const player of players) {
-    if (player.best) {
-      finished += 1;
-      scored.push({
-        id: player.id,
-        name: player.name,
-        avg: player.best.avg,
-        wins: player.best.wins,
-        pulls: player.best.pulls,
-        optimalFrac: player.best.optimalFrac,
-        ranked: player.best.pulls >= MIN_RANKED_PULLS,
-        rounds: player.rounds || 1,
-      });
-      if (player.best.pulls >= MIN_RANKED_PULLS) {
-        const bin = Math.min(10, Math.max(0, Math.round(player.best.optimalFrac * 10)));
-        histogram[bin] += 1;
-      }
-    } else if (player.live && player.live.pulls > 0) {
-      playing += 1;
+    const l = player.live;
+    const live = l && l.pulls > 0 ? {
+      avg: round3(l.wins / l.pulls),
+      wins: l.wins,
+      pulls: l.pulls,
+      optimalFrac: round3(l.optimalPulls / l.pulls),
+      inPlay: l.finished !== true,
+    } : null;
+
+    if (live && live.inPlay) playing += 1;
+    if (player.best) finished += 1;
+
+    /* A round in progress counts. Rounds have no fixed length, so a player who
+     * has not stopped yet would otherwise be missing from the board for the
+     * whole activity, which is the opposite of what a live board is for. */
+    let score = player.best || null;
+    let onAir = false;
+    if (live && betterScore(live, score)) {
+      score = live;
+      onAir = live.inPlay;
+    }
+    if (!score) continue;
+
+    const ranked = score.pulls >= MIN_RANKED_PULLS;
+    scored.push({
+      id: player.id,
+      name: player.name,
+      avg: score.avg,
+      wins: score.wins,
+      pulls: score.pulls,
+      optimalFrac: score.optimalFrac,
+      ranked,
+      playing: onAir,
+      rounds: player.rounds || 0,
+    });
+    if (ranked) {
+      const bin = Math.min(10, Math.max(0, Math.round(score.optimalFrac * 10)));
+      histogram[bin] += 1;
     }
   }
   scored.sort((a, b) => {
@@ -301,15 +370,24 @@ async function board(session, full, limit) {
     return b.pulls - a.pulls;
   });
 
-  const pulled = players.reduce(
-    (sum, p) => sum + ((p.best && p.best.pulls) || (p.live && p.live.pulls) || 0), 0);
+  const pulled = players.reduce((sum, p) => sum +
+    ((p.totals && p.totals.pulls) || (p.live && p.live.pulls) || 0), 0);
+  const won = players.reduce((sum, p) => sum +
+    ((p.totals && p.totals.wins) || (p.live && p.live.wins) || 0), 0);
 
   const data = {
     session,
     epoch: settings.epoch,
     settings,
     minRankedPulls: MIN_RANKED_PULLS,
-    counts: { joined: players.length, playing, finished, pulls: pulled },
+    counts: {
+      joined: players.length,
+      playing,
+      finished,
+      pulls: pulled,
+      wins: won,
+      paid: pulled ? Math.round((won / pulled) * 1000) / 1000 : 0,
+    },
     leaderboard: scored.slice(0, limit),
     histogram,
     updatedAt: Date.now(),
@@ -317,8 +395,9 @@ async function board(session, full, limit) {
 
   if (full) {
     data.curves = meanCurves(players);
+    data.arms = armSplit(players);
     data.live = players
-      .filter((p) => p.live && p.live.pulls > 0 && !p.best)
+      .filter((p) => p.live && p.live.pulls > 0 && p.live.finished !== true)
       .map((p) => ({ name: p.name, pulls: p.live.pulls }))
       .sort((a, b) => b.pulls - a.pulls)
       .slice(0, 40);
@@ -388,6 +467,7 @@ export default async function handler(req) {
         updatedAt: Date.now(),
         rounds: 0,
         live: null,
+        totals: null,
         best: null,
         first: null,
       };
@@ -414,6 +494,7 @@ export default async function handler(req) {
         updatedAt: Date.now(),
         rounds: Math.max(existing.rounds || 0, Math.round(num(body.rounds, 0, 10000, 0))),
         live: liveState(body.live) || existing.live,
+        totals: totalsState(body.totals) || existing.totals || null,
       };
       if (incomingBest && betterScore(incomingBest, existing.best)) {
         record.best = incomingBest;
