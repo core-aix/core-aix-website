@@ -209,8 +209,8 @@
   function renderCharts(data) {
     var curves = data.curves;
     if (!curves || !curves.n) {
-      drawChart(el('chart-reward'), [], { empty: 'Curves appear once a student finishes a round.' });
-      drawChart(el('chart-optimal'), [], { empty: 'Curves appear once a student finishes a round.' });
+      drawChart(el('chart-reward'), [], { empty: 'Curves appear once a student has pulled ten times.' });
+      drawChart(el('chart-optimal'), [], { empty: 'Curves appear once a student has pulled ten times.' });
       el('legend-reward').innerHTML = '';
       el('legend-optimal').innerHTML = '';
       el('table-view').innerHTML = '';

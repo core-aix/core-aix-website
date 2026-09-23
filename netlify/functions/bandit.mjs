@@ -108,6 +108,9 @@ function firstRound(raw) {
     avg: num(raw.avg, 0, 1, 0),
     optimalFrac: num(raw.optimalFrac, 0, 1, 0),
     optimalMean: num(raw.optimalMean, 0, 1, 0),
+    /* A round still running sends its curve every ten seconds, so this one is
+     * replaced as it grows and frozen once the round ends. */
+    final: raw.final === true,
     curve: c,
     base: {},
   };
@@ -503,7 +506,12 @@ export default async function handler(req) {
       if (incomingBest && betterScore(incomingBest, existing.best)) {
         record.best = incomingBest;
       }
-      if (!existing.first && body.first) {
+      /* The curve of a round in progress keeps arriving and keeps replacing
+       * the one held, so the class charts fill while the room is playing
+       * instead of waiting for anybody to stop. Once a round has ended its
+       * curve is final and a later round cannot overwrite it, which is what
+       * stops a second attempt inflating the class average. */
+      if (body.first && !(existing.first && existing.first.final)) {
         const first = firstRound(body.first);
         if (first) record.first = first;
       }
