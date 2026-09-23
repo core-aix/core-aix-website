@@ -19,6 +19,11 @@
 
 * { box-sizing: border-box; }
 
+/* The hidden attribute is only a rule in the browser's own stylesheet, and any
+ * class that sets display beats it. The controls panel is a flex row and the
+ * two views are grids, so without this line hiding them does nothing at all. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   min-height: 100vh;
