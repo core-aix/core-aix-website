@@ -14,7 +14,7 @@
 <header class="bar">
   <div class="bar-title">
     <h1>Three-armed bandit</h1>
-    <p id="bar-sub">Session <span id="session-name">l02</span></p>
+    <p id="bar-sub">live</p>
   </div>
   <div class="tallies">
     <div class="tally"><span class="tally-value" id="count-joined">0</span><span class="tally-label">players</span></div>
@@ -25,13 +25,12 @@
 </header>
 
 <div id="controls" class="controls" hidden>
-  <label>Session <input id="ctl-session" type="text" value="l02" size="10"></label>
   <label>Join link <input id="ctl-join" type="url" placeholder="https://your-app.vercel.app" size="34"></label>
   <label>Arms <input id="ctl-arms" type="number" min="2" max="12" step="1" value="3" size="3"></label>
   <label>Admin key <input id="ctl-key" type="password" size="14" autocomplete="off"></label>
   <button id="ctl-save" class="ctl-button" type="button">Apply settings</button>
   <button id="ctl-open" class="ctl-button" type="button">Close joining</button>
-  <button id="ctl-reset" class="ctl-button ctl-danger" type="button">Reset the session</button>
+  <button id="ctl-reset" class="ctl-button ctl-danger" type="button">Wipe all records</button>
   <span id="ctl-note" class="ctl-note"></span>
 </div>
 

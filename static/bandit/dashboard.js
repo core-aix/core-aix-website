@@ -16,7 +16,7 @@
 
   var el = function (id) { return document.getElementById(id); };
 
-  var settings = { session: 'l02', joinUrl: '', adminKey: '' };
+  var settings = { joinUrl: '', adminKey: '' };
   var latest = null;
   var knownNames = {};
   var timer = null;
@@ -33,7 +33,6 @@
       if (raw) Object.assign(settings, JSON.parse(raw));
     } catch (err) { /* nothing stored */ }
     var params = new URLSearchParams(global.location.search);
-    if (params.get('s')) settings.session = params.get('s');
     if (params.get('join')) settings.joinUrl = params.get('join');
   }
 
@@ -52,8 +51,7 @@
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
     /* A bare host needs its trailing slash before the query string. */
     if (!/^https?:\/\/[^/?#]+\//i.test(url) && url.indexOf('?') === -1) url += '/';
-    var joiner = url.indexOf('?') === -1 ? '?' : '&';
-    return url + joiner + 's=' + encodeURIComponent(settings.session);
+    return url;
   }
 
   function renderQR() {
@@ -96,8 +94,7 @@
   function poll() {
     /* The curves and the arm split ride only on the reveal request, so the
      * live page is not holding the answer in memory while the class plays. */
-    var url = API + '/board?session=' + encodeURIComponent(settings.session) +
-      '&limit=10' + (view === 'reveal' ? '&full=1' : '');
+    var url = API + '/board?limit=10' + (view === 'reveal' ? '&full=1' : '');
     fetch(url, { headers: { accept: 'application/json' } })
       .then(function (res) { return res.json(); })
       .then(function (data) {
@@ -127,8 +124,7 @@
     el('join-min').textContent = data.minRankedPulls || 10;
     el('ctl-arms').value = data.settings.k;
     el('ctl-open').textContent = data.settings.open ? 'Close joining' : 'Open joining';
-    el('bar-sub').innerHTML = 'Session <span id="session-name">' + escapeHtml(data.session) + '</span>' +
-      (data.settings.open ? '' : ', joining closed');
+    el('bar-sub').textContent = data.settings.open ? 'live' : 'live, joining closed';
 
     var pulls = data.counts.pulls || 0;
     el('hero-paid').textContent = pulls ? Math.round(100 * data.counts.paid) + '%' : '–';
@@ -462,9 +458,7 @@
     return fetch(API + '/admin', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        session: settings.session, key: settings.adminKey, action: action, settings: patch
-      })
+      body: JSON.stringify({ key: settings.adminKey, action: action, settings: patch })
     }).then(function (res) { return res.json(); }).then(function (data) {
       if (data.error) throw new Error(data.error);
       note.textContent = 'done';
@@ -493,12 +487,10 @@
       this.setAttribute('aria-expanded', String(!panel.hidden));
     });
 
-    el('ctl-session').value = settings.session;
     el('ctl-join').value = settings.joinUrl;
     el('ctl-key').value = settings.adminKey;
 
     el('ctl-save').addEventListener('click', function () {
-      settings.session = el('ctl-session').value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'default';
       settings.joinUrl = el('ctl-join').value.trim();
       settings.adminKey = el('ctl-key').value;
       saveSettings();
@@ -514,7 +506,7 @@
     });
 
     el('ctl-reset').addEventListener('click', function () {
-      if (!global.confirm('Clear every player and score in session ' + settings.session + '?')) return;
+      if (!global.confirm('Delete every player and every score? This cannot be undone.')) return;
       knownNames = {};
       admin('reset');
     });

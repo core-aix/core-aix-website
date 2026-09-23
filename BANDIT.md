@@ -19,11 +19,23 @@ All routes sit under `/api/bandit`.
 
 | Route | Method | Body or query | Answer |
 |---|---|---|---|
-| `/settings` | GET | `session` | the session settings, created on first use |
-| `/join` | POST | `session`, `name` | a player id and a write token |
-| `/sync` | POST | `session`, `id`, `token`, `live`, `best`, `first` | acknowledgement |
-| `/board` | GET | `session`, `full`, `limit` | the aggregate the dashboard shows |
-| `/admin` | POST | `session`, `key`, `action` | reset the session or change its settings |
+| `/settings` | GET | | the settings, created on first use |
+| `/join` | POST | `name` | a player id and a write token |
+| `/sync` | POST | `id`, `token`, `live`, `totals`, `best`, `first` | acknowledgement |
+| `/board` | GET | `full`, `limit` | the aggregate the dashboard shows |
+| `/admin` | POST | `key`, `action` | wipe the records or change the settings |
+
+**One game at a time.** There is no session name and no generation counter. A
+lecture runs one activity, and a wipe deletes every player record outright, so
+nothing can come back. A phone whose record has gone is refused on its next
+sync with `rejoin`, joins again under the same name, and keeps the round it is
+in, which is the whole of the recovery path.
+
+Keys carry their own namespace, `v3/settings` and `v3/player/<id>`. Earlier
+versions stored a settings blob per session and a player under the session and
+the generation, so a bare `settings` key collides with that directory in the
+local store and a bare `p/` prefix would list every player from every session
+ever run. A wipe clears those older shapes too.
 
 Every player owns one blob and writes only that blob, so two students finishing
 at the same moment cannot overwrite each other. The aggregate is assembled on
@@ -38,15 +50,16 @@ leaderboard uses the best round.
 
 A round has no fixed length. A student pulls as often as they like and stops
 when they choose, so a total is not comparable between two students and the
-score is the share of pulls that paid. Ten pulls is the point at which that
+score is the share of pulls that paid. The curve goes up every ten seconds from
+the tenth pull onward, so the class charts fill while the room plays rather
+than waiting for anybody to stop, and it is frozen when that round ends. Ten pulls is the point at which that
 share means anything, so a shorter round still shows its average and sorts under
 the ranked ones. Rounds of different lengths make the class curves ragged, and a
 step is plotted only where enough rounds were still running to say anything
 about the cohort.
 
-Settings carry a version. Raising it makes the next read replace a session
-created under an older shape of the game, and the epoch survives so a phone is
-told to start again rather than losing its identity.
+Settings carry a version. Raising it makes the next read replace a stored copy
+from an older shape of the game rather than serving it to a phone.
 
 ## Settings
 
@@ -72,11 +85,11 @@ view never even requests them. The curves and the arm split ride only on a
 request carrying `full=1`, which only the reveal view makes.
 
 ```
-https://core-aix.org/bandit/?s=l02&join=https://your-app.vercel.app
+https://core-aix.org/bandit/?join=https://your-app.vercel.app
 ```
 
 Controls also sets the number of arms, which the phones pick up on their next
-round without a redeploy.
+round without a redeploy, and **Wipe all records** deletes everything.
 
 ## Running it locally
 

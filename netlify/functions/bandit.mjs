@@ -1,13 +1,18 @@
 /**
  * Live statistics backend for the three-armed bandit game used in the lecture.
  *
+ * One game at a time. There is no session name and no epoch, because a lecture
+ * runs one activity and a reset should leave nothing behind. A reset deletes
+ * every player record, and a phone whose record has gone is told to join
+ * again, which is the whole of the recovery path.
+ *
  * Endpoints, all under /api/bandit:
  *
- *   GET  /settings?session=l02          the session settings, created on demand
- *   POST /join      {session, name}     issues a player id and a write token
- *   POST /sync      {session, id, ...}  upserts one player's record
- *   GET  /board?session=l02&full=1      the aggregate the dashboard shows
- *   POST /admin     {session, key, ...} reset the session or change settings
+ *   GET  /settings                  the settings, created on demand
+ *   POST /join      {name}          issues a player id and a write token
+ *   POST /sync      {id, token, …}  upserts one player's record
+ *   GET  /board?full=1              the aggregate the dashboard shows
+ *   POST /admin     {key, action}   wipe the records or change the settings
  *
  * Every player owns one blob and writes only that blob, so two students
  * finishing at the same moment can never overwrite each other. The aggregate
@@ -30,11 +35,10 @@ const CACHE_MS = 1200;
  * ranked ones rather than above them. */
 const MIN_RANKED_PULLS = 10;
 
-const DEFAULT_SETTINGS = { k: 3, open: true, epoch: 1 };
-/* Raised whenever the shape of a session changes, so a session created under
- * the old game does not serve stale settings to a phone. The epoch survives,
- * because it is what tells a phone to start again. */
-const SETTINGS_VERSION = 2;
+const DEFAULT_SETTINGS = { k: 3, open: true };
+/* Raised whenever the shape of the settings changes, so a stored copy from an
+ * older shape of the game is replaced rather than served to a phone. */
+const SETTINGS_VERSION = 3;
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -60,11 +64,6 @@ const fail = (message, status = 400) => json({ error: message }, status);
 /* ------------------------------------------------------------------ */
 /* Validation                                                          */
 /* ------------------------------------------------------------------ */
-
-function sessionId(raw) {
-  const s = String(raw || 'default').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
-  return s || 'default';
-}
 
 function cleanName(raw) {
   return String(raw || '')
@@ -214,31 +213,32 @@ const randomId = (n = 12) => {
 
 const store = () => getStore({ name: STORE, consistency: 'strong' });
 
-const settingsKey = (session) => `settings/${session}`;
-const playerPrefix = (session, epoch) => `p/${session}/${epoch}/`;
-const playerKey = (session, epoch, id) => `${playerPrefix(session, epoch)}${id}`;
+/* The keys carry their own namespace. Earlier versions stored a settings blob
+ * per session at settings/<name> and a player at p/<name>/<epoch>/<id>, so a
+ * bare `settings` key collides with that directory in the local store, and a
+ * bare `p/` prefix would list every player from every session ever run. */
+const SETTINGS_KEY = 'v3/settings';
+const PLAYER_PREFIX = 'v3/player/';
+const LEGACY_PREFIXES = ['p/', 'settings/'];
+const playerKey = (id) => `${PLAYER_PREFIX}${id}`;
 
-async function readSettings(session) {
+async function readSettings() {
   const blobs = store();
-  const found = await blobs.get(settingsKey(session), { type: 'json' });
+  const found = await blobs.get(SETTINGS_KEY, { type: 'json' });
   if (found && typeof found === 'object' && found.v === SETTINGS_VERSION) {
     return {
       k: Math.round(num(found.k, 2, 32, DEFAULT_SETTINGS.k)),
       open: found.open !== false,
-      epoch: num(found.epoch, 1, 1e9, 1),
     };
   }
-  const epoch = found && typeof found === 'object'
-    ? num(found.epoch, 1, 1e9, 1) : 1;
-  const fresh = { ...DEFAULT_SETTINGS, epoch, v: SETTINGS_VERSION, createdAt: Date.now() };
-  await blobs.setJSON(settingsKey(session), fresh);
-  return { k: fresh.k, open: fresh.open, epoch: fresh.epoch };
+  const fresh = { ...DEFAULT_SETTINGS, v: SETTINGS_VERSION, createdAt: Date.now() };
+  await blobs.setJSON(SETTINGS_KEY, fresh);
+  return { k: fresh.k, open: fresh.open };
 }
 
-async function listPlayers(session, epoch) {
+async function listPlayers() {
   const blobs = store();
-  const prefix = playerPrefix(session, epoch);
-  const { blobs: entries } = await blobs.list({ prefix });
+  const { blobs: entries } = await blobs.list({ prefix: PLAYER_PREFIX });
   const keys = entries.map((entry) => entry.key).slice(0, MAX_PLAYERS);
   const records = await Promise.all(
     keys.map((key) => blobs.get(key, { type: 'json' }).catch(() => null)),
@@ -311,13 +311,13 @@ function meanCurves(players) {
   return out;
 }
 
-async function board(session, full, limit) {
-  const cacheKey = `${session}|${full ? 1 : 0}|${limit}`;
+async function board(full, limit) {
+  const cacheKey = `${full ? 1 : 0}|${limit}`;
   const hit = cache.get(cacheKey);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
 
-  const settings = await readSettings(session);
-  const players = await listPlayers(session, settings.epoch);
+  const settings = await readSettings();
+  const players = await listPlayers();
 
   let playing = 0;
   let finished = 0;
@@ -383,8 +383,6 @@ async function board(session, full, limit) {
     ((p.totals && p.totals.wins) || (p.live && p.live.wins) || 0), 0);
 
   const data = {
-    session,
-    epoch: settings.epoch,
     settings,
     minRankedPulls: MIN_RANKED_PULLS,
     counts: {
@@ -436,14 +434,13 @@ export default async function handler(req) {
 
   try {
     if (req.method === 'GET') {
-      const session = sessionId(url.searchParams.get('session'));
       if (route === 'settings') {
-        return json({ session, settings: await readSettings(session) });
+        return json({ settings: await readSettings() });
       }
       if (route === 'board') {
         const limit = num(url.searchParams.get('limit'), 1, 200, 20);
         const full = url.searchParams.get('full') === '1';
-        return json(await board(session, full, Math.round(limit)));
+        return json(await board(full, Math.round(limit)));
       }
       return fail('unknown route', 404);
     }
@@ -451,17 +448,16 @@ export default async function handler(req) {
     if (req.method !== 'POST') return fail('method not allowed', 405);
 
     const body = await parseBody(req);
-    const session = sessionId(body.session);
 
     if (route === 'join') {
       const name = cleanName(body.name);
       if (name.length < 2) return fail('name too short');
-      const settings = await readSettings(session);
-      if (!settings.open) return fail('the session is closed', 409);
+      const settings = await readSettings();
+      if (!settings.open) return fail('joining is closed', 409);
 
       const blobs = store();
-      const { blobs: entries } = await blobs.list({ prefix: playerPrefix(session, settings.epoch) });
-      if (entries.length >= MAX_PLAYERS) return fail('the session is full', 409);
+      const { blobs: entries } = await blobs.list({ prefix: PLAYER_PREFIX });
+      if (entries.length >= MAX_PLAYERS) return fail('the game is full', 409);
 
       const id = randomId(8);
       const token = randomId(12);
@@ -469,7 +465,6 @@ export default async function handler(req) {
         id,
         token,
         name,
-        epoch: settings.epoch,
         joinedAt: Date.now(),
         updatedAt: Date.now(),
         rounds: 0,
@@ -478,8 +473,8 @@ export default async function handler(req) {
         best: null,
         first: null,
       };
-      await blobs.setJSON(playerKey(session, settings.epoch, id), record);
-      return json({ id, token, name, settings, rounds: 0, best: null, firstDone: false });
+      await blobs.setJSON(playerKey(id), record);
+      return json({ id, token, name, settings, rounds: 0, best: null });
     }
 
     if (route === 'sync') {
@@ -487,11 +482,10 @@ export default async function handler(req) {
       const token = String(body.token || '').slice(0, 64);
       if (!id || !token) return fail('missing identity');
 
-      const settings = await readSettings(session);
       const blobs = store();
-      const key = playerKey(session, settings.epoch, id);
+      const key = playerKey(id);
       const existing = await blobs.get(key, { type: 'json' });
-      if (!existing) return json({ ok: false, epoch: settings.epoch, rejoin: true }, 409);
+      if (!existing) return json({ ok: false, rejoin: true }, 409);
       if (existing.token !== token) return fail('token mismatch', 409);
 
       const incomingBest = bestState(body.best);
@@ -516,7 +510,7 @@ export default async function handler(req) {
         if (first) record.first = first;
       }
       await blobs.setJSON(key, record);
-      return json({ ok: true, epoch: settings.epoch });
+      return json({ ok: true });
     }
 
     if (route === 'admin') {
@@ -524,19 +518,26 @@ export default async function handler(req) {
       if (expected && String(body.key || '') !== expected) return fail('bad key', 409);
 
       const blobs = store();
-      const settings = await readSettings(session);
+      const settings = await readSettings();
 
+      /* A reset deletes every player record outright. Nothing is hidden behind
+       * a generation counter, so nothing can come back, and a phone still
+       * playing is told to join again on its next sync. */
       if (body.action === 'reset') {
-        const nextEpoch = settings.epoch + 1;
-        const updated = { ...settings, epoch: nextEpoch, v: SETTINGS_VERSION };
-        await blobs.setJSON(settingsKey(session), updated);
+        const { blobs: entries } = await blobs.list({ prefix: PLAYER_PREFIX });
+        await Promise.all(entries.map((entry) => blobs.delete(entry.key).catch(() => null)));
+        /* Anything left by an older shape of the game goes too, so a wipe
+         * really does leave the store empty. */
+        let legacy = 0;
+        for (const prefix of LEGACY_PREFIXES) {
+          try {
+            const old = await blobs.list({ prefix });
+            legacy += old.blobs.length;
+            await Promise.all(old.blobs.map((b) => blobs.delete(b.key).catch(() => null)));
+          } catch (err) { /* nothing of that shape is left */ }
+        }
         cache.clear();
-        /* Old rounds are cleared afterwards, since the epoch already hides them. */
-        try {
-          const { blobs: entries } = await blobs.list({ prefix: playerPrefix(session, settings.epoch) });
-          await Promise.all(entries.map((entry) => blobs.delete(entry.key).catch(() => null)));
-        } catch (err) { /* the epoch bump is what matters */ }
-        return json({ ok: true, settings: updated });
+        return json({ ok: true, cleared: entries.length, legacy, settings });
       }
 
       if (body.action === 'settings') {
@@ -544,12 +545,11 @@ export default async function handler(req) {
         const updated = {
           k: Math.round(num(patch.k, 2, 32, settings.k)),
           open: patch.open === undefined ? settings.open : patch.open !== false,
-          epoch: settings.epoch,
           v: SETTINGS_VERSION,
         };
-        await blobs.setJSON(settingsKey(session), updated);
+        await blobs.setJSON(SETTINGS_KEY, updated);
         cache.clear();
-        return json({ ok: true, settings: updated });
+        return json({ ok: true, settings: { k: updated.k, open: updated.open } });
       }
 
       return fail('unknown action');
