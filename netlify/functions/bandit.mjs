@@ -283,19 +283,17 @@ function meanCurves(players) {
     }
   }
 
-  /* A step reached by three players out of forty says nothing about the class,
-   * so the tail is cut where too few rounds are still running. A small class
-   * keeps everybody, since a floor above the class size would plot nothing. */
-  const n = contributors.length;
-  const floor = Math.max(1, Math.min(5, n), Math.ceil(0.35 * n));
+  /* Everything is plotted, out to the longest round anybody played. The tail
+   * rests on fewer and fewer students, so the count behind each step rides
+   * along in `support` and the dashboard says where it thins rather than
+   * cutting the curve off and leaving the room wondering why it stopped. */
   const finish = (slot) => {
     const r = [];
     const o = [];
     for (let t = 0; t < steps; t += 1) {
       const n = slot.n[t];
-      const enough = n >= floor;
-      r.push(enough ? Math.round((slot.r[t] / n) * 1000) / 1000 : null);
-      o.push(enough ? Math.round((slot.o[t] / n) * 1000) / 1000 : null);
+      r.push(n ? Math.round((slot.r[t] / n) * 1000) / 1000 : null);
+      o.push(n ? Math.round((slot.o[t] / n) * 1000) / 1000 : null);
     }
     return { r, o };
   };
@@ -303,6 +301,7 @@ function meanCurves(players) {
   const out = {
     n: contributors.length,
     steps,
+    support: Array.from(acc.students.n, (x) => x),
     optimalMean: Math.round((optimalMean / contributors.length) * 1000) / 1000,
   };
   for (const key of ['students', 'eps', 'ucb', 'greedy']) out[key] = finish(acc[key]);

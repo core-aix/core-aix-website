@@ -95,6 +95,14 @@
       <div id="legend-optimal" class="legend"></div>
       <div class="chart-holder"><svg id="chart-optimal" class="chart" role="img" aria-label="Share of pulls on the best arm against pull number"></svg></div>
     </div>
+    <div class="zoom" role="group" aria-label="How many pulls to plot">
+      <span class="zoom-label">Plot the first</span>
+      <button class="zoom-button" type="button" data-zoom="25">25</button>
+      <button class="zoom-button" type="button" data-zoom="50">50</button>
+      <button class="zoom-button" type="button" data-zoom="100">100</button>
+      <button class="zoom-button is-on" type="button" data-zoom="0">all pulls</button>
+      <span class="zoom-note" id="zoom-note"></span>
+    </div>
     <button id="table-toggle" class="link-button" type="button" aria-expanded="false">Show the numbers</button>
     <div id="table-view" class="table-view" hidden></div>
   </section>

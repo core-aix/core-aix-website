@@ -21,6 +21,7 @@
   var knownNames = {};
   var timer = null;
   var view = 'live';
+  var zoom = 0;            /* pulls to plot, 0 meaning all of them */
 
   /* ---------------------------------------------------------------- */
   /* Settings                                                           */
@@ -216,13 +217,24 @@
       return;
     }
 
-    var steps = curves.steps || curves.students.r.length;
+    var full = curves.steps || curves.students.r.length;
+    var steps = zoom ? Math.min(zoom, full) : full;
     var window = Math.max(5, Math.round(steps / 12));
+    var clip = function (values) { return values.slice(0, steps); };
+
+    /* The tail of the curve rests on fewer and fewer students, so say where it
+     * thins instead of leaving the room to wonder why it wanders. */
+    var support = curves.support || [];
+    var atEnd = support.length >= steps ? support[steps - 1] : curves.n;
+    el('zoom-note').textContent = full
+      ? 'out of ' + full + ' pulls, and ' + atEnd + ' of ' + curves.n +
+        ' students reached pull ' + steps
+      : '';
 
     var rewardSeries = SERIES.map(function (s) {
       return {
         key: s.key, label: s.label, colour: s.colour,
-        values: smooth(curves[s.key].r, window).map(function (v) {
+        values: clip(smooth(curves[s.key].r, window)).map(function (v) {
           return v === null ? null : v * 100;
         })
       };
@@ -230,7 +242,7 @@
     var optimalSeries = SERIES.map(function (s) {
       return {
         key: s.key, label: s.label, colour: s.colour,
-        values: smooth(curves[s.key].o, window).map(function (v) { return v === null ? null : v * 100; })
+        values: clip(smooth(curves[s.key].o, window)).map(function (v) { return v === null ? null : v * 100; })
       };
     });
 
@@ -505,6 +517,18 @@
       knownNames = {};
       admin('reset');
     });
+
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.zoom-button'), function (button) {
+        button.addEventListener('click', function () {
+          zoom = Number(button.dataset.zoom);
+          Array.prototype.forEach.call(
+            document.querySelectorAll('.zoom-button'), function (other) {
+              other.classList.toggle('is-on', other === button);
+            });
+          if (latest) render(latest);
+        });
+      });
 
     el('table-toggle').addEventListener('click', function () {
       var view = el('table-view');
