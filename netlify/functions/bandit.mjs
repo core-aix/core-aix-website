@@ -339,12 +339,15 @@ async function board(session, full, limit) {
      * has not stopped yet would otherwise be missing from the board for the
      * whole activity, which is the opposite of what a live board is for. */
     let score = player.best || null;
-    let onAir = false;
-    if (live && betterScore(live, score)) {
-      score = live;
-      onAir = live.inPlay;
-    }
+    if (live && betterScore(live, score)) score = live;
     if (!score) continue;
+
+    /* The count beside a name is every pull that player has taken, which is
+     * what a reader takes the word to mean. Reporting the length of whichever
+     * round happens to be scoring best showed 63 beside somebody who had
+     * pulled 246 times over three rounds. The score stays the best round's,
+     * since that is the competition. */
+    const lifetime = (player.totals && player.totals.pulls) || score.pulls;
 
     const ranked = score.pulls >= MIN_RANKED_PULLS;
     scored.push({
@@ -352,10 +355,12 @@ async function board(session, full, limit) {
       name: player.name,
       avg: score.avg,
       wins: score.wins,
-      pulls: score.pulls,
+      pulls: lifetime,
+      scorePulls: score.pulls,
       optimalFrac: score.optimalFrac,
       ranked,
-      playing: onAir,
+      /* Mid round is mid round, whichever round is scoring. */
+      playing: !!(live && live.inPlay),
       rounds: player.rounds || 0,
     });
     if (ranked) {

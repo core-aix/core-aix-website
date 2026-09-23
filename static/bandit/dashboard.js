@@ -329,7 +329,8 @@
       return;
     }
 
-    var pad = { top: 14, right: 84, bottom: 26, left: 46 };
+    /* Room for the 17px axis text and the end labels beside the lines. */
+    var pad = { top: 18, right: 132, bottom: 46, left: 68 };
     var plotW = Math.max(10, width - pad.left - pad.right);
     var plotH = Math.max(10, height - pad.top - pad.bottom);
     var steps = series[0].values.length;
@@ -353,7 +354,7 @@
       var yy = y(value);
       svg.appendChild(node('line', { x1: pad.left, y1: yy, x2: pad.left + plotW, y2: yy, class: 'grid-line' }));
       svg.appendChild(node('text', {
-        x: pad.left - 8, y: yy + 4, 'text-anchor': 'end', class: 'axis-text'
+        x: pad.left - 11, y: yy + 6, 'text-anchor': 'end', class: 'axis-text'
       }, (options.format || String)(value)));
     }
     svg.appendChild(node('line', {
@@ -362,11 +363,11 @@
     for (t = 0; t <= 4; t += 1) {
       var idx = Math.round(((steps - 1) * t) / 4);
       svg.appendChild(node('text', {
-        x: x(idx), y: pad.top + plotH + 17, 'text-anchor': 'middle', class: 'axis-text'
+        x: x(idx), y: pad.top + plotH + 24, 'text-anchor': 'middle', class: 'axis-text'
       }, String(idx + 1)));
     }
     svg.appendChild(node('text', {
-      x: pad.left + plotW / 2, y: height - 2, 'text-anchor': 'middle', class: 'axis-text'
+      x: pad.left + plotW / 2, y: height - 4, 'text-anchor': 'middle', class: 'axis-text'
     }, 'pull number'));
 
     /* The reference line for the best arm, which is not one of the series */
@@ -377,7 +378,7 @@
         class: 'series series-optimal', stroke: 'var(--series-optimal)'
       }));
       svg.appendChild(node('text', {
-        x: pad.left + plotW + 6, y: ry + 4, class: 'end-label', fill: 'var(--series-optimal)'
+        x: pad.left + plotW + 9, y: ry + 6, class: 'end-label', fill: 'var(--series-optimal)'
       }, options.reference.label));
     }
 
@@ -395,7 +396,7 @@
       svg.appendChild(node('path', { d: d.trim(), class: 'series', stroke: s.colour }));
       if (lastPoint) {
         svg.appendChild(node('text', {
-          x: Math.min(lastPoint.x + 7, pad.left + plotW + 6), y: lastPoint.y + 4,
+          x: Math.min(lastPoint.x + 10, pad.left + plotW + 9), y: lastPoint.y + 6,
           class: 'end-label', fill: s.colour
         }, s.label));
       }
@@ -409,7 +410,7 @@
     crosshair.setAttribute('opacity', '0');
     svg.appendChild(crosshair);
     var dots = series.map(function (s) {
-      var dot = node('circle', { r: 4, fill: s.colour, class: 'hover-dot', opacity: '0' });
+      var dot = node('circle', { r: 6, fill: s.colour, class: 'hover-dot', opacity: '0' });
       svg.appendChild(dot);
       return dot;
     });
