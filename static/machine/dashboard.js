@@ -9,7 +9,7 @@
   var STORE_KEY = 'machine-dashboard';
 
   /* The optimal action in each state, marked on the reveal. */
-  var OPTIMAL = { fast: 'run', slow: 'service' };
+  var OPTIMAL = { fast: 'run', slow: 'run', worn: 'service' };
 
   var el = function (id) { return document.getElementById(id); };
 
@@ -169,7 +169,7 @@
    * that were service, with the optimal action marked. */
   function renderChoices(choices) {
     var host = el('choices');
-    host.innerHTML = ['fast', 'slow'].map(function (state) {
+    host.innerHTML = ['fast', 'slow', 'worn'].map(function (state) {
       var row = (choices && choices[state]) || { run: 0, service: 0 };
       var total = row.run + row.service;
       var bars = ['run', 'service'].map(function (action) {
@@ -203,20 +203,23 @@
       { label: 'The class, all rounds', value: all.meanTotal, kind: 'class',
         note: all.rounds ? count(all.rounds) + (all.rounds === 1 ? ' round' : ' rounds') : 'no rounds yet' },
       { label: 'Always run', value: ref.alwaysRun, kind: 'ref', note: 'expected' },
-      { label: 'Run when fast, service when slow', value: ref.optimal, kind: 'best', note: 'expected, the best policy' }
+      { label: 'Service whenever not fast', value: ref.serviceWhenNotFast, kind: 'ref2', note: 'expected' },
+      { label: 'Run unless worn', value: ref.optimal, kind: 'best', note: 'expected, the best policy' }
     ];
+    /* A class mean can be negative, and a bar has no length below zero, so
+     * the bar starts at zero and the number beside it carries the sign. */
     var top = Math.max.apply(null, rows.map(function (r) { return r.value || 0; }).concat([1]));
     el('totals').innerHTML = rows.map(function (r) {
       var has = r.value !== null && r.value !== undefined;
       return '<div class="total-row total-' + r.kind + '">' +
         '<span class="total-name">' + r.label + '<span class="total-note">' + r.note + '</span></span>' +
         '<span class="split-track"><span class="split-fill" style="width:' +
-        (has ? (100 * r.value / top).toFixed(1) : 0) + '%"></span></span>' +
+        (has ? (100 * Math.max(0, r.value) / top).toFixed(1) : 0) + '%"></span></span>' +
         '<span class="split-share">' + (has ? one(r.value) : '') + '</span>' +
         '</div>';
     }).join('');
     el('totals-note').textContent = 'Each round is short and random, so the class mean ' +
-      'moves from round to round. The two policies show the average over very many rounds.';
+      'moves from round to round. The three policies show the average over very many rounds.';
   }
 
   /* ---------------------------------------------------------------- */

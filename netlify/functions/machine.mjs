@@ -2,11 +2,12 @@
  * Live statistics backend for the machine game used in the lecture on Markov
  * decision processes.
  *
- * The game. A machine is fast or slow. Running a fast machine pays 4 and
- * leaves it fast or slow with probability one half each. Servicing a fast
- * machine pays 1 and keeps it fast. Running a slow machine pays 2 and the
- * machine fails, which ends the round. Servicing a slow machine pays 0 and
- * makes it fast. Each evening the factory stays open with probability 0.9.
+ * The game, version 2. A machine is fast, slow or worn, and every round starts
+ * fast. Running pays 5 when fast (then fast or slow, half each), 4 when slow
+ * (then slow 0.7, worn 0.3) and 1 when worn (then worn 0.6, failed 0.4, which
+ * ends the round). Servicing makes the machine fast and pays 1 when fast, -2
+ * when slow and -1 when worn. Each evening the factory stays open with
+ * probability 0.9.
  *
  * One game at a time, as in the bandit game. A wipe deletes every player
  * record, and a phone whose record has gone is told to join again.
@@ -37,25 +38,29 @@ const CACHE_MS = 1200;
  * finished rounds than this is listed under the ranked ones. */
 const MIN_RANKED_ROUNDS = 3;
 
-/* The most a day can pay, so a total larger than this many times the days
- * played cannot be honest and is clipped. */
-const MAX_DAY_REWARD = 4;
+/* The most and the least a day can pay, so a total outside these multiples
+ * of the days played cannot be honest and is clipped. Totals can be negative,
+ * since servicing a slow or a worn machine costs money. */
+const MAX_DAY_REWARD = 5;
+const MIN_DAY_REWARD = -2;
 
 /* The chance that the factory stays open for another day. It is the discount
  * of the lecture and is fixed, since the reference totals below rest on it. */
 const OPEN_PROBABILITY = 0.9;
 
 /* Expected round totals from the fast state, from a linear solve of the
- * Bellman equations with gamma 0.9 for each of the four deterministic
- * policies. Service in the fast state gives 10 whatever the slow action is. */
-const REFERENCE = { alwaysRun: 8.909, optimal: 27.586, serviceFast: 10.0 };
+ * Bellman equations with gamma 0.9 for the deterministic policies. Always run
+ * gives 19.23, servicing whenever the machine is not fast gives 28.28, and
+ * the optimal policy, run when fast or slow and service when worn, gives
+ * 37.48. Any policy that services a fast machine gives 10. */
+const REFERENCE = { alwaysRun: 19.23, serviceWhenNotFast: 28.28, optimal: 37.48 };
 
 const DEFAULT_SETTINGS = { open: true };
 /* Raised whenever the shape of the settings changes, so a stored copy from an
  * older shape of the game is replaced instead of being served to a phone. */
-const SETTINGS_VERSION = 1;
+const SETTINGS_VERSION = 2;
 
-const STATES = ['fast', 'slow'];
+const STATES = ['fast', 'slow', 'worn'];
 const ACTIONS = ['run', 'service'];
 
 const CORS = {
@@ -100,7 +105,8 @@ function num(value, lo, hi, fallback) {
 const int = (value, lo, hi, fallback = 0) => Math.round(num(value, lo, hi, fallback));
 const round3 = (x) => Math.round(x * 1000) / 1000;
 
-/* Decision counts, {fast: {run, service}, slow: {run, service}}. */
+/* Decision counts, {fast: {run, service}, slow: {…}, worn: {…}}. A phone on
+ * the older two-state model sends no worn key, which counts as zero. */
 function choicesState(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const out = {};
@@ -112,11 +118,16 @@ function choicesState(raw) {
   return out;
 }
 
-const emptyChoices = () => ({ fast: { run: 0, service: 0 }, slow: { run: 0, service: 0 } });
+const emptyChoices = () => ({
+  fast: { run: 0, service: 0 },
+  slow: { run: 0, service: 0 },
+  worn: { run: 0, service: 0 },
+});
 
 /* Counters only ever climb, so a retried sync that arrives after a newer one
  * cannot take a count back down. */
 function maxChoices(a, b) {
+  a = choicesState(a);
   if (!a) return b;
   if (!b) return a;
   const out = emptyChoices();
@@ -130,8 +141,8 @@ function liveState(raw) {
   return {
     inRound: raw.inRound === true,
     day,
-    total: int(raw.total, 0, MAX_DAY_REWARD * Math.max(1, day)),
-    state: raw.state === 'slow' ? 'slow' : (raw.state === 'failed' ? 'failed' : 'fast'),
+    total: int(raw.total, MIN_DAY_REWARD * day, MAX_DAY_REWARD * day),
+    state: ['slow', 'worn', 'failed'].includes(raw.state) ? raw.state : 'fast',
   };
 }
 
@@ -141,8 +152,8 @@ function roundsState(raw) {
   const days = int(raw.days, count, 1e7, count);
   return {
     count,
-    sum: int(raw.sum, 0, MAX_DAY_REWARD * days),
-    best: int(raw.best, 0, 1e6),
+    sum: int(raw.sum, MIN_DAY_REWARD * days, MAX_DAY_REWARD * days),
+    best: int(raw.best, MIN_DAY_REWARD * days, MAX_DAY_REWARD * days),
     days,
   };
 }
@@ -152,7 +163,7 @@ function firstRound(raw) {
   const days = int(raw.days, 1, 1e5, 1);
   const choices = choicesState(raw.choices);
   return {
-    total: int(raw.total, 0, MAX_DAY_REWARD * days),
+    total: int(raw.total, MIN_DAY_REWARD * days, MAX_DAY_REWARD * days),
     days,
     choices: choices || emptyChoices(),
   };
@@ -243,8 +254,9 @@ async function board(full, limit) {
 
   rows.sort((a, b) => {
     if (a.ranked !== b.ranked) return a.ranked ? -1 : 1;
-    const am = a.mean === null ? -1 : a.mean;
-    const bm = b.mean === null ? -1 : b.mean;
+    /* Means can be negative, so a player with no finished round sorts last. */
+    const am = a.mean === null ? -Infinity : a.mean;
+    const bm = b.mean === null ? -Infinity : b.mean;
     if (bm !== am) return bm - am;
     if (b.rounds !== a.rounds) return b.rounds - a.rounds;
     return a.name.localeCompare(b.name);
@@ -268,7 +280,7 @@ async function board(full, limit) {
       if (player.choices) {
         const sum = emptyChoices();
         for (const s of STATES) for (const a of ACTIONS) {
-          sum[s][a] = choices[s][a] + player.choices[s][a];
+          sum[s][a] = choices[s][a] + ((player.choices[s] || {})[a] || 0);
         }
         choices = sum;
       }
@@ -313,7 +325,10 @@ export default async function handler(req) {
     if (req.method === 'GET') {
       if (route === 'settings') return json(await readSettings());
       if (route === 'board') {
-        const limit = int(url.searchParams.get('limit'), 1, MAX_PLAYERS, 20);
+        /* Number(null) is 0, so a missing limit has to be caught before it is
+         * clamped to 1. */
+        const rawLimit = url.searchParams.get('limit');
+        const limit = rawLimit ? int(rawLimit, 1, MAX_PLAYERS, 20) : 20;
         const full = url.searchParams.get('full') === '1';
         return json(await board(full, limit));
       }

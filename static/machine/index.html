@@ -51,44 +51,50 @@
     <h2 class="card-head">The machine</h2>
     <p class="card-sub">Every round starts with a fast machine. Each arrow shows its
       probability and its reward.</p>
-    <svg class="model" viewBox="0 0 980 470" role="img"
-      aria-label="The model. Fast and run pays 4 and the machine stays fast with probability 0.5 or turns slow with probability 0.5. Fast and service pays 1 and the machine stays fast. Slow and run pays 2 and the machine fails, which ends the round. Slow and service pays 0 and the machine turns fast.">
+    <svg class="model" viewBox="0 64 1300 446" role="img"
+      aria-label="The model. Fast and run pays 5, then fast or slow with probability 0.5 each. Fast and service pays 1 and stays fast. Slow and run pays 4, then slow with probability 0.7 or worn with probability 0.3. Slow and service pays minus 2 and turns fast. Worn and run pays 1, then worn with probability 0.6 or failed with probability 0.4, which ends the round. Worn and service pays minus 1 and turns fast.">
       <defs>
-        <marker id="head-run" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <marker id="head-run" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0 0 L10 5 L0 10 z" fill="var(--run)"/>
         </marker>
-        <marker id="head-service" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <marker id="head-service" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M0 0 L10 5 L0 10 z" fill="var(--service)"/>
         </marker>
       </defs>
+      <g transform="translate(60 0)">
+        <!-- Run arrows -->
+        <path class="edge edge-run" d="M 140 231 C 80 90, 260 90, 200 231" marker-end="url(#head-run)"/>
+        <text class="edge-label run" x="170" y="100" text-anchor="middle">run, 0.5, +5</text>
+        <path class="edge edge-run" d="M 230 262 Q 335 180 440 262" marker-end="url(#head-run)"/>
+        <text class="edge-label run" x="335" y="200" text-anchor="middle">run, 0.5, +5</text>
+        <path class="edge edge-run" d="M 470 231 C 410 90, 590 90, 530 231" marker-end="url(#head-run)"/>
+        <text class="edge-label run" x="500" y="100" text-anchor="middle">run, 0.7, +4</text>
+        <path class="edge edge-run" d="M 560 262 Q 665 180 770 262" marker-end="url(#head-run)"/>
+        <text class="edge-label run" x="665" y="200" text-anchor="middle">run, 0.3, +4</text>
+        <path class="edge edge-run" d="M 800 231 C 740 90, 920 90, 860 231" marker-end="url(#head-run)"/>
+        <text class="edge-label run" x="830" y="100" text-anchor="middle">run, 0.6, +1</text>
+        <path class="edge edge-run" d="M 896 290 L 1076 290" marker-end="url(#head-run)"/>
+        <text class="edge-label run" x="986" y="270" text-anchor="middle">run, 0.4, +1</text>
 
-      <!-- Fast, run, stays fast -->
-      <path class="edge edge-run" d="M 178 196 C 110 40, 330 40, 262 196" marker-end="url(#head-run)"/>
-      <text class="edge-label run" x="220" y="62" text-anchor="middle">run, 0.5, +4</text>
+        <!-- Service arrows -->
+        <path class="edge edge-service" d="M 106 272 C 0 230, 0 350, 106 308" marker-end="url(#head-service)"/>
+        <text class="edge-label service" x="-52" y="398" text-anchor="start">service, 1, +1</text>
+        <path class="edge edge-service" d="M 440 318 Q 335 400 230 318" marker-end="url(#head-service)"/>
+        <text class="edge-label service" x="335" y="398" text-anchor="middle">service, 1, &#8722;2</text>
+        <path class="edge edge-service" d="M 830 356 C 830 500, 170 500, 170 356" marker-end="url(#head-service)"/>
+        <text class="edge-label service" x="500" y="500" text-anchor="middle">service, 1, &#8722;1</text>
 
-      <!-- Fast, service, stays fast -->
-      <path class="edge edge-service" d="M 152 300 C 20 360, 90 470, 196 334" marker-end="url(#head-service)"/>
-      <text class="edge-label service" x="14" y="456" text-anchor="start">service, 1, +1</text>
-
-      <!-- Fast, run, turns slow -->
-      <path class="edge edge-run" d="M 288 222 Q 420 140 538 222" marker-end="url(#head-run)"/>
-      <text class="edge-label run" x="414" y="152" text-anchor="middle">run, 0.5, +4</text>
-
-      <!-- Slow, service, turns fast -->
-      <path class="edge edge-service" d="M 538 302 Q 420 384 290 302" marker-end="url(#head-service)"/>
-      <text class="edge-label service" x="414" y="384" text-anchor="middle">service, 1, 0</text>
-
-      <!-- Slow, run, fails -->
-      <path class="edge edge-run" d="M 664 262 L 796 262" marker-end="url(#head-run)"/>
-      <text class="edge-label run" x="730" y="240" text-anchor="middle">run, 1, +2</text>
-
-      <circle class="node" cx="220" cy="262" r="74"/>
-      <text class="node-label" x="220" y="272" text-anchor="middle">fast</text>
-      <circle class="node" cx="590" cy="262" r="74"/>
-      <text class="node-label" x="590" y="272" text-anchor="middle">slow</text>
-      <rect class="node node-end" x="800" y="214" width="170" height="96" rx="14"/>
-      <text class="node-label" x="885" y="258" text-anchor="middle">failed</text>
-      <text class="node-note" x="885" y="290" text-anchor="middle">round ends</text>
+        <!-- States -->
+        <circle class="node" cx="170" cy="290" r="66"/>
+        <text class="node-label" x="170" y="301" text-anchor="middle">fast</text>
+        <circle class="node" cx="500" cy="290" r="66"/>
+        <text class="node-label" x="500" y="301" text-anchor="middle">slow</text>
+        <circle class="node" cx="830" cy="290" r="66"/>
+        <text class="node-label" x="830" y="301" text-anchor="middle">worn</text>
+        <rect class="node node-end" x="1080" y="244" width="150" height="92" rx="14"/>
+        <text class="node-label" x="1155" y="288" text-anchor="middle">failed</text>
+        <text class="node-note" x="1155" y="318" text-anchor="middle">round ends</text>
+      </g>
     </svg>
     <p class="model-open">Each evening the factory stays open with probability 0.9.
       Otherwise the round ends.</p>
@@ -113,13 +119,13 @@
     <h2 class="card-head">What the class chose</h2>
     <p class="card-sub">Every decision in every round, split by the state of the machine.</p>
     <div id="choices" class="choices"></div>
-    <p class="lesson">Running a slow machine pays 2 today. Servicing it pays 0 today
-      and keeps the machine running.</p>
+    <p class="lesson">A slow machine still earns 4 a day. Repairing it costs 2, so
+      the best play keeps it running and repairs only a worn machine.</p>
   </section>
 
   <section class="card card-totals">
     <h2 class="card-head">Round totals</h2>
-    <p class="card-sub">The class mean against the expected total of two fixed policies.</p>
+    <p class="card-sub">The class mean against the expected total of three fixed policies.</p>
     <div id="totals" class="totals"></div>
     <p class="card-sub" id="totals-note"></p>
   </section>

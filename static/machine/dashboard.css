@@ -16,6 +16,7 @@
   --class: #9bb0c6;
   --fast: #39c7a5;
   --slow: #c98500;
+  --worn: #d4605a;
 }
 
 * { box-sizing: border-box; }
@@ -117,7 +118,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 }
 /* The model takes the middle, since the lecturer talks over it, and the
  * board keeps enough width to be read from the back of the room. */
-.grid-live { grid-template-columns: minmax(250px, 20vw) minmax(0, 1.35fr) minmax(300px, 1fr); }
+.grid-live { grid-template-columns: minmax(240px, 18vw) minmax(0, 1.6fr) minmax(300px, 1fr); }
 .grid-reveal { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 
 .card {
@@ -158,12 +159,12 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .model { display: block; width: 100%; height: auto; margin: 4px 0 6px; }
 .model .node { fill: var(--panel-2); stroke: var(--ink); stroke-width: 3; }
 .model .node-end { stroke: var(--muted); stroke-dasharray: 8 6; }
-.model .node-label { fill: var(--ink); font-size: 34px; font-weight: 700; font-family: inherit; }
+.model .node-label { fill: var(--ink); font-size: 36px; font-weight: 700; font-family: inherit; }
 .model .node-note { fill: var(--muted); font-size: 22px; font-family: inherit; }
 .model .edge { fill: none; stroke-width: 4; }
 .model .edge-run { stroke: var(--run); }
 .model .edge-service { stroke: var(--service); }
-.model .edge-label { font-size: 26px; font-weight: 600; font-family: inherit; }
+.model .edge-label { font-size: 30px; font-weight: 600; font-family: inherit; }
 .model .edge-label.run { fill: var(--run); }
 .model .edge-label.service { fill: var(--service); }
 .model-open {
@@ -223,6 +224,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 }
 .state-fast { background: var(--fast); }
 .state-slow { background: var(--slow); }
+.state-worn { background: var(--worn); }
 .state-note { color: var(--muted); font-size: clamp(0.85rem, 1.02vw, 1.15rem); font-weight: 400; }
 
 .split, .total-row {
@@ -263,6 +265,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .total-note { display: block; color: var(--muted); font-size: 0.6em; }
 .total-class .split-fill { background: var(--class); }
 .total-ref .split-fill { background: var(--run); }
+.total-ref2 .split-fill { background: var(--service); }
 .total-best .split-fill { background: var(--accent); }
 .total-best .total-name { font-weight: 700; }
 
