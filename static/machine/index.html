@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<title>Machine game, live</title>
+<link rel="icon" type="image/png" href="/images/core-aix-logo.png">
+<link rel="stylesheet" href="/machine/dashboard.css">
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-title">
+    <h1>Run or service the machine</h1>
+    <p id="bar-sub">live</p>
+  </div>
+  <div class="tallies">
+    <div class="tally"><span class="tally-value" id="count-players">0</span><span class="tally-label">players</span></div>
+    <div class="tally"><span class="tally-value" id="count-rounds">0</span><span class="tally-label">rounds</span></div>
+    <div class="tally"><span class="tally-value" id="count-days">0</span><span class="tally-label">days</span></div>
+  </div>
+  <button id="reveal-toggle" class="icon-button is-primary" type="button" aria-expanded="false">Reveal the results</button>
+  <button id="settings-toggle" class="icon-button" type="button" aria-expanded="false">Controls</button>
+</header>
+
+<div id="controls" class="controls" hidden>
+  <label>Join link <input id="ctl-join" type="url" placeholder="https://your-app.vercel.app" size="34"></label>
+  <label>Admin key <input id="ctl-key" type="password" size="14" autocomplete="off"></label>
+  <button id="ctl-save" class="ctl-button" type="button">Apply settings</button>
+  <button id="ctl-open" class="ctl-button" type="button">Close joining</button>
+  <button id="ctl-wipe" class="ctl-button ctl-danger" type="button">Wipe all records</button>
+  <span id="ctl-note" class="ctl-note"></span>
+</div>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- The live page. Nothing here shows a choice or the best policy.      -->
+<!-- ------------------------------------------------------------------ -->
+<main id="view-live" class="grid grid-live">
+
+  <section class="card card-join">
+    <h2 class="card-head">Scan to play</h2>
+    <div id="qr" class="qr" role="img" aria-label="QR code with the link to the game"></div>
+    <p class="join-url" id="join-url">set the join link in Controls</p>
+    <p class="join-hint">Pick any name and play as many rounds as you like.
+      <strong id="join-min">3</strong> finished rounds put you on the board.</p>
+  </section>
+
+  <section class="card card-model">
+    <h2 class="card-head">The machine</h2>
+    <p class="card-sub">Every round starts with a fast machine. Each arrow shows its
+      probability and its reward.</p>
+    <svg class="model" viewBox="0 0 980 470" role="img"
+      aria-label="The model. Fast and run pays 4 and the machine stays fast with probability 0.5 or turns slow with probability 0.5. Fast and service pays 1 and the machine stays fast. Slow and run pays 2 and the machine fails, which ends the round. Slow and service pays 0 and the machine turns fast.">
+      <defs>
+        <marker id="head-run" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--run)"/>
+        </marker>
+        <marker id="head-service" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--service)"/>
+        </marker>
+      </defs>
+
+      <!-- Fast, run, stays fast -->
+      <path class="edge edge-run" d="M 178 196 C 110 40, 330 40, 262 196" marker-end="url(#head-run)"/>
+      <text class="edge-label run" x="220" y="62" text-anchor="middle">run, 0.5, +4</text>
+
+      <!-- Fast, service, stays fast -->
+      <path class="edge edge-service" d="M 152 300 C 20 360, 90 470, 196 334" marker-end="url(#head-service)"/>
+      <text class="edge-label service" x="14" y="456" text-anchor="start">service, 1, +1</text>
+
+      <!-- Fast, run, turns slow -->
+      <path class="edge edge-run" d="M 288 222 Q 420 140 538 222" marker-end="url(#head-run)"/>
+      <text class="edge-label run" x="414" y="152" text-anchor="middle">run, 0.5, +4</text>
+
+      <!-- Slow, service, turns fast -->
+      <path class="edge edge-service" d="M 538 302 Q 420 384 290 302" marker-end="url(#head-service)"/>
+      <text class="edge-label service" x="414" y="384" text-anchor="middle">service, 1, 0</text>
+
+      <!-- Slow, run, fails -->
+      <path class="edge edge-run" d="M 664 262 L 796 262" marker-end="url(#head-run)"/>
+      <text class="edge-label run" x="730" y="240" text-anchor="middle">run, 1, +2</text>
+
+      <circle class="node" cx="220" cy="262" r="74"/>
+      <text class="node-label" x="220" y="272" text-anchor="middle">fast</text>
+      <circle class="node" cx="590" cy="262" r="74"/>
+      <text class="node-label" x="590" y="272" text-anchor="middle">slow</text>
+      <rect class="node node-end" x="800" y="214" width="170" height="96" rx="14"/>
+      <text class="node-label" x="885" y="258" text-anchor="middle">failed</text>
+      <text class="node-note" x="885" y="290" text-anchor="middle">round ends</text>
+    </svg>
+    <p class="model-open">Each evening the factory stays open with probability 0.9.
+      Otherwise the round ends.</p>
+    <p class="card-sub">The score of a round is the sum of its rewards.</p>
+  </section>
+
+  <section class="card card-board">
+    <h2 class="card-head">Leaderboard</h2>
+    <p class="card-sub">Mean total over finished rounds. A dot marks a round in play.</p>
+    <ol id="board" class="board"></ol>
+    <p class="board-empty" id="board-empty">Nobody has joined yet.</p>
+  </section>
+
+</main>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- The reveal. Shown only when the lecturer asks for it.               -->
+<!-- ------------------------------------------------------------------ -->
+<main id="view-reveal" class="grid grid-reveal" hidden>
+
+  <section class="card card-choices">
+    <h2 class="card-head">What the class chose</h2>
+    <p class="card-sub">Every decision in every round, split by the state of the machine.</p>
+    <div id="choices" class="choices"></div>
+    <p class="lesson">Running a slow machine pays 2 today. Servicing it pays 0 today
+      and keeps the machine running.</p>
+  </section>
+
+  <section class="card card-totals">
+    <h2 class="card-head">Round totals</h2>
+    <p class="card-sub">The class mean against the expected total of two fixed policies.</p>
+    <div id="totals" class="totals"></div>
+    <p class="card-sub" id="totals-note"></p>
+  </section>
+
+</main>
+
+<p class="status" id="status">connecting</p>
+
+<script src="/machine/qr.js"></script>
+<script src="/machine/dashboard.js"></script>
+</body>
+</html>

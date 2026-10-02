@@ -21,3 +21,9 @@
   for = "/bandit/*"
   [headers.values]
     X-Robots-Tag = "noindex"
+
+# The machine game dashboard follows the same pattern.
+[[headers]]
+  for = "/machine/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
