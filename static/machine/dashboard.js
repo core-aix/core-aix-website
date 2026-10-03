@@ -163,6 +163,33 @@
     if (!reveal) return;
     renderChoices(reveal.choices);
     renderTotals(reveal);
+    renderEndings(reveal.endings);
+  }
+
+  /* The share of rounds that ended in failure, and the mean total of a failed
+   * round against a completed 20-day shift. */
+  function renderEndings(endings) {
+    endings = endings || {};
+    var n = endings.rounds || 0;
+    el('endings-share').textContent = n
+      ? Math.round(100 * endings.failedShare) + ' per cent of ' + count(n) +
+        (n === 1 ? ' round' : ' rounds') + ' ended with a failed machine.'
+      : 'No round has finished yet.';
+    var rows = [
+      { label: 'Machine failed', value: endings.failedMeanTotal, kind: 'ref', count: endings.failed || 0 },
+      { label: 'Shift completed', value: endings.shiftMeanTotal, kind: 'best', count: endings.shift || 0 }
+    ];
+    var top = Math.max.apply(null, rows.map(function (r) { return r.value || 0; }).concat([1]));
+    el('endings').innerHTML = rows.map(function (r) {
+      var has = r.value !== null && r.value !== undefined;
+      return '<div class="total-row total-' + r.kind + '">' +
+        '<span class="total-name">' + r.label + '<span class="total-note">mean total, ' +
+        count(r.count) + (r.count === 1 ? ' round' : ' rounds') + '</span></span>' +
+        '<span class="split-track"><span class="split-fill" style="width:' +
+        (has ? (100 * Math.max(0, r.value) / top).toFixed(1) : 0) + '%"></span></span>' +
+        '<span class="split-share">' + (has ? one(r.value) : '') + '</span>' +
+        '</div>';
+    }).join('');
   }
 
   /* For each state, the share of the class's decisions that were run and
@@ -204,7 +231,7 @@
         note: all.rounds ? count(all.rounds) + (all.rounds === 1 ? ' round' : ' rounds') : 'no rounds yet' },
       { label: 'Always run', value: ref.alwaysRun, kind: 'ref', note: 'expected' },
       { label: 'Service whenever not fast', value: ref.serviceWhenNotFast, kind: 'ref2', note: 'expected' },
-      { label: 'Run unless worn', value: ref.optimal, kind: 'best', note: 'expected, the best policy' }
+      { label: 'Best possible play', value: ref.best, kind: 'best', note: 'expected, run unless worn, and run on day 20' }
     ];
     /* A class mean can be negative, and a bar has no length below zero, so
      * the bar starts at zero and the number beside it carries the sign. */
@@ -218,8 +245,8 @@
         '<span class="split-share">' + (has ? one(r.value) : '') + '</span>' +
         '</div>';
     }).join('');
-    el('totals-note').textContent = 'Each round is short and random, so the class mean ' +
-      'moves from round to round. The three policies show the average over very many rounds.';
+    el('totals-note').textContent = 'Each round is random, so the class mean moves from ' +
+      'round to round. The three policies show the average over very many rounds.';
   }
 
   /* ---------------------------------------------------------------- */

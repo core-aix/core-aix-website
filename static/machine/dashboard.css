@@ -269,6 +269,8 @@ h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
 .total-best .split-fill { background: var(--accent); }
 .total-best .total-name { font-weight: 700; }
 
+.sub-head { margin-top: 22px; font-size: clamp(1rem, 1.3vw, 1.4rem); }
+.last-day { margin: 16px 0 0; }
 .lesson {
   margin: 22px 0 0;
   padding: 14px 16px;

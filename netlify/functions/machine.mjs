@@ -2,19 +2,19 @@
  * Live statistics backend for the machine game used in the lecture on Markov
  * decision processes.
  *
- * The game, version 2. A machine is fast, slow or worn, and every round starts
+ * The game, version 3. A machine is fast, slow or worn, and every round starts
  * fast. Running pays 5 when fast (then fast or slow, half each), 4 when slow
  * (then slow 0.7, worn 0.3) and 1 when worn (then worn 0.6, failed 0.4, which
  * ends the round). Servicing makes the machine fast and pays 1 when fast, -2
- * when slow and -1 when worn. Each evening the factory stays open with
- * probability 0.9.
+ * when slow and -1 when worn. A round ends when the machine fails or once
+ * day 20 has been played, and its total is the plain sum of its rewards.
  *
  * One game at a time, as in the bandit game. A wipe deletes every player
  * record, and a phone whose record has gone is told to join again.
  *
  * Endpoints, all under /api/machine:
  *
- *   GET  /settings                  {version, openProbability, open}
+ *   GET  /settings                  {version, days, open}
  *   POST /join      {name}          issues a player id and a write token
  *   POST /sync      {id, token, …}  upserts one player's record
  *   GET  /board?full=1              the aggregate the dashboard shows
@@ -44,21 +44,22 @@ const MIN_RANKED_ROUNDS = 3;
 const MAX_DAY_REWARD = 5;
 const MIN_DAY_REWARD = -2;
 
-/* The chance that the factory stays open for another day. It is the discount
- * of the lecture and is fixed, since the reference totals below rest on it. */
-const OPEN_PROBABILITY = 0.9;
+/* Every round lasts at most this many days. It is fixed, since the reference
+ * totals below rest on it, so a round total lies between -40 and 100. */
+const ROUND_DAYS = 20;
 
-/* Expected round totals from the fast state, from a linear solve of the
- * Bellman equations with gamma 0.9 for the deterministic policies. Always run
- * gives 19.23, servicing whenever the machine is not fast gives 28.28, and
- * the optimal policy, run when fast or slow and service when worn, gives
- * 37.48. Any policy that services a fast machine gives 10. */
-const REFERENCE = { alwaysRun: 19.23, serviceWhenNotFast: 28.28, optimal: 37.48 };
+/* Expected round totals from the fast state over 20 days, from exact backward
+ * induction. Always run gives 25.79, servicing whenever the machine is not
+ * fast gives 54.89, and run when fast or slow with service when worn gives
+ * 72.79. The best possible play, 73.11, is that policy on days 1 to 19 and
+ * always run on day 20, since a repair on the last day no longer pays off.
+ * Any policy that services a fast machine gives 20. */
+const REFERENCE = { alwaysRun: 25.79, serviceWhenNotFast: 54.89, runRunService: 72.79, best: 73.11 };
 
 const DEFAULT_SETTINGS = { open: true };
 /* Raised whenever the shape of the settings changes, so a stored copy from an
  * older shape of the game is replaced instead of being served to a phone. */
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 
 const STATES = ['fast', 'slow', 'worn'];
 const ACTIONS = ['run', 'service'];
@@ -137,7 +138,7 @@ function maxChoices(a, b) {
 
 function liveState(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const day = int(raw.day, 0, 1e5);
+  const day = int(raw.day, 0, ROUND_DAYS);
   return {
     inRound: raw.inRound === true,
     day,
@@ -149,24 +150,55 @@ function liveState(raw) {
 function roundsState(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const count = int(raw.count, 0, 1e5);
-  const days = int(raw.days, count, 1e7, count);
+  const days = int(raw.days, count, ROUND_DAYS * count, count);
   return {
     count,
     sum: int(raw.sum, MIN_DAY_REWARD * days, MAX_DAY_REWARD * days),
-    best: int(raw.best, MIN_DAY_REWARD * days, MAX_DAY_REWARD * days),
+    best: int(raw.best, MIN_DAY_REWARD * ROUND_DAYS, MAX_DAY_REWARD * ROUND_DAYS),
     days,
   };
 }
 
+/* Every finished round, newest last, at most 50. A round that ended early in
+ * failure stays in, so a failure scores low instead of vanishing. An entry
+ * that cannot be honest is dropped. */
+const MAX_HISTORY = 50;
+const ENDINGS = ['failed', 'shift'];
+
+function historyState(raw) {
+  if (!Array.isArray(raw)) return null;
+  const out = [];
+  for (const entry of raw.slice(-MAX_HISTORY)) {
+    if (!entry || typeof entry !== 'object') continue;
+    const days = Number(entry.days);
+    const total = Number(entry.total);
+    if (!Number.isInteger(days) || days < 1 || days > ROUND_DAYS) continue;
+    if (!Number.isFinite(total) || total < MIN_DAY_REWARD * days || total > MAX_DAY_REWARD * days) continue;
+    if (!ENDINGS.includes(entry.ended)) continue;
+    out.push({ total: Math.round(total), days, ended: entry.ended });
+  }
+  return out;
+}
+
 function firstRound(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  const days = int(raw.days, 1, 1e5, 1);
+  const days = int(raw.days, 1, ROUND_DAYS, 1);
   const choices = choicesState(raw.choices);
   return {
     total: int(raw.total, MIN_DAY_REWARD * days, MAX_DAY_REWARD * days),
     days,
     choices: choices || emptyChoices(),
   };
+}
+
+function pickHistory(existing, incoming, incomingRounds) {
+  const stored = Array.isArray(existing.history) ? existing.history : [];
+  if (!incoming) return stored;
+  if (incoming.length > stored.length) return incoming;
+  if (incoming.length < stored.length) return stored;
+  const storedCount = existing.rounds ? existing.rounds.count : 0;
+  const incomingCount = incomingRounds ? incomingRounds.count : 0;
+  return incomingCount >= storedCount ? incoming : stored;
 }
 
 const randomId = (n = 12) => {
@@ -186,7 +218,7 @@ const PLAYER_PREFIX = 'v1/player/';
 const playerKey = (id) => `${PLAYER_PREFIX}${id}`;
 
 function publicSettings(stored) {
-  return { version: SETTINGS_VERSION, openProbability: OPEN_PROBABILITY, open: stored.open !== false };
+  return { version: SETTINGS_VERSION, days: ROUND_DAYS, open: stored.open !== false };
 }
 
 async function readSettings() {
@@ -289,7 +321,23 @@ async function board(full, limit) {
         firstSum += player.first.total;
       }
     }
+    /* How the class's rounds ended, from every stored history. */
+    const endings = { rounds: 0, failed: 0, shift: 0 };
+    let failedSum = 0;
+    let shiftSum = 0;
+    for (const player of players) {
+      for (const h of player.history || []) {
+        endings.rounds += 1;
+        if (h.ended === 'failed') { endings.failed += 1; failedSum += h.total; }
+        else { endings.shift += 1; shiftSum += h.total; }
+      }
+    }
+    endings.failedShare = endings.rounds ? round3(endings.failed / endings.rounds) : null;
+    endings.failedMeanTotal = endings.failed ? round3(failedSum / endings.failed) : null;
+    endings.shiftMeanTotal = endings.shift ? round3(shiftSum / endings.shift) : null;
+
     data.reveal = {
+      endings,
       choices,
       first: { count: firstCount, meanTotal: firstCount ? round3(firstSum / firstCount) : null },
       all: { rounds: classRounds, meanTotal: classRounds ? round3(classSum / classRounds) : null },
@@ -368,6 +416,7 @@ export default async function handler(req) {
         rounds: null,
         choices: null,
         first: null,
+        history: [],
       });
       return json({ id, token, name });
     }
@@ -395,6 +444,10 @@ export default async function handler(req) {
         rounds: rounds && (!existing.rounds || rounds.count >= existing.rounds.count)
           ? rounds : existing.rounds,
         choices: maxChoices(existing.choices, choicesState(body.choices)),
+        /* The longer history wins, so a stale retry cannot shorten it. Once
+         * the cap is reached the lengths tie, and the sync reporting at least
+         * as many finished rounds wins. */
+        history: pickHistory(existing, historyState(body.history), rounds),
       };
       /* The first finished round is frozen once it has arrived, so a second
        * attempt cannot change the class figures. */

@@ -96,8 +96,7 @@
         <text class="node-note" x="1155" y="318" text-anchor="middle">round ends</text>
       </g>
     </svg>
-    <p class="model-open">Each evening the factory stays open with probability 0.9.
-      Otherwise the round ends.</p>
+    <p class="model-open">A shift lasts 20 days. It ends early only if the machine fails.</p>
     <p class="card-sub">The score of a round is the sum of its rewards.</p>
   </section>
 
@@ -119,15 +118,19 @@
     <h2 class="card-head">What the class chose</h2>
     <p class="card-sub">Every decision in every round, split by the state of the machine.</p>
     <div id="choices" class="choices"></div>
+    <p class="card-sub last-day">On the last day, run a worn machine too, since a repair no longer pays off.</p>
     <p class="lesson">A slow machine still earns 4 a day. Repairing it costs 2, so
       the best play keeps it running and repairs only a worn machine.</p>
   </section>
 
   <section class="card card-totals">
     <h2 class="card-head">Round totals</h2>
-    <p class="card-sub">The class mean against the expected total of three fixed policies.</p>
+    <p class="card-sub">The class mean against the expected total of three ways to play a 20-day shift.</p>
     <div id="totals" class="totals"></div>
     <p class="card-sub" id="totals-note"></p>
+    <h3 class="sub-head">How the rounds ended</h3>
+    <p class="card-sub" id="endings-share"></p>
+    <div id="endings" class="totals"></div>
   </section>
 
 </main>
