@@ -377,7 +377,8 @@ h1 {
   margin-bottom: 0.8rem;
 }
 
-.people-links {
+.people-links,
+.people-lines {
   margin: 0.8rem 0 0;
   padding-left: 1.2rem;
 }

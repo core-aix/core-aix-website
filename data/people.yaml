@@ -25,30 +25,17 @@
     - label: "LinkedIn"
       url: "https://www.linkedin.com/in/arastun-mammadli-068ab0228/"
 
-- name: "Jacob Clark"
-  role: "MSc Student"
-  level: "msc"
+- name: "Mengchen Lu"
+  role: "PhD Student"
+  level: "phd"
+  image: "/images/mengchen-lu.jpg"
   links:
     - label: "LinkedIn"
-      url: "https://www.linkedin.com/in/jacob-clark-280915142/"
+      url: "https://www.linkedin.com/in/mengchen-lu-317960333/"
 
-- name: "Oscar Jones"
-  role: "MSc Student"
+- role: "MSc and Undergraduate Students"
   level: "msc"
-  links:
-    - label: "LinkedIn"
-      url: "https://www.linkedin.com/in/oscar-jones-91b349294/"
-
-- name: "Sidharth Vasudevan"
-  role: "MSc Student"
-  level: "msc"
-  links:
-    - label: "LinkedIn"
-      url: "https://www.linkedin.com/in/sidharth-vasudevan-11395a182/"
-
-- name: "Rana Waqas"
-  role: "MSc Student"
-  level: "msc"
-  links:
-    - label: "LinkedIn"
-      url: "https://www.linkedin.com/in/ranamuhammadwaqas/"
+  lines:
+    - "5 undergraduate students in Autumn 2026 – Spring 2027"
+    - "2 MSc students in Autumn 2026"
+    - "4 MSc students in Summer 2026"

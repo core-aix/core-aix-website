@@ -11,8 +11,13 @@
   <article class="post-card">
     {{ with .image }}<img src="{{ . }}" alt="{{ $person.name }}" class="people-photo">{{ end }}
     <p class="meta">{{ .role }}</p>
-    <h2>{{ .name }}</h2>
-    <div class="prose">{{ .bio | markdownify }}</div>
+    {{ with .name }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .bio }}<div class="prose">{{ . | markdownify }}</div>{{ end }}
+    {{ with .lines }}
+    <ul class="people-lines">
+      {{ range . }}<li>{{ . }}</li>{{ end }}
+    </ul>
+    {{ end }}
     {{ with .links }}
     <ul class="people-links">
       {{ range . }}
