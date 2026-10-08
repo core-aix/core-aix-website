@@ -30,6 +30,8 @@
   level: "phd"
   image: "/images/mengchen-lu.jpg"
   links:
+    - label: "Personal homepage"
+      url: "https://ryder1u.github.io"
     - label: "LinkedIn"
       url: "https://www.linkedin.com/in/mengchen-lu-317960333/"
 
