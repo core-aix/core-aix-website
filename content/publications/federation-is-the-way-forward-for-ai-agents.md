@@ -6,9 +6,9 @@ authors:
   - "H. Woisetschläger"
   - "N. D. Lane"
   - "S. Wang"
-venue: "Preprint"
-venue_type: "preprint"
+venue: "Annual Conference on Neural Information Processing Systems (NeurIPS), Position Paper Track"
+venue_type: "conference"
 pdf: "/papers/HW_FedAgents2026.pdf"
 ---
 
-Read the full preprint as a hosted PDF: [Download PDF](/papers/HW_FedAgents2026.pdf).
+Read the full paper as a hosted PDF: [Download PDF](/papers/HW_FedAgents2026.pdf).

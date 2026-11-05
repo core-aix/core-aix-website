@@ -5,6 +5,8 @@ url: "/publications/"
 
 ### Selected Recent Publications
 
+- L. Yuan, W. Fang, S. Wang, C. Brinton, ["PAAC: privacy-aware agentic device-cloud collaboration"](https://arxiv.org/abs/2605.08646), in *Annual Conference on Neural Information Processing Systems (NeurIPS)*, Dec. 2026 (acceptance rate: 25.7%).
+- H. Woisetschläger, N. D. Lane, S. Wang, ["Federation is the way forward for AI agents"](/papers/HW_FedAgents2026.pdf), in *Annual Conference on Neural Information Processing Systems (NeurIPS), Position Paper Track*, Dec. 2026 (acceptance rate: 22.9%).
 - S. Wang, H. Woisetschläger, H.-A. Jacobsen, Mingyue Ji, ["Position: let's develop data probes to fundamentally understand how data affects LLM performance"](https://arxiv.org/abs/2605.18801), in *International Conference on Machine Learning (ICML)*, Jul. 2026.
 - S. Wang, H. Woisetschläger, ["Agentic performance at the edge: insights from benchmarking"](https://arxiv.org/abs/2605.10384), in *Workshop on Autonomic and Agentic AI For IoT and Edge Systems (AutoEdge) in Conjunction with MobiSys 2026*, Jun. 2026.
 - F. Wu, J. Hu, G. Min, S. Wang, ["Efficient orthogonal fine-tuning with principal subspace adaptation"](https://openreview.net/pdf?id=FSHrinMArK), in *International Conference on Learning Representations (ICLR)*, Apr. 2026.
