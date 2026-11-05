@@ -1,3 +1,3 @@
 {{- $href := .Destination -}}
-{{- $isExternal := or (hasPrefix $href "http://") (hasPrefix $href "https://") -}}
-<a href="{{ $href | safeURL }}"{{ with .Title }} title="{{ . }}"{{ end }}{{ if $isExternal }} target="_blank" rel="noopener noreferrer"{{ end }}>{{ .Text | safeHTML }}</a>
+{{- $opensNewTab := or (hasPrefix $href "http://") (hasPrefix $href "https://") (hasPrefix $href "/papers/") -}}
+<a href="{{ $href | safeURL }}"{{ with .Title }} title="{{ . }}"{{ end }}{{ if $opensNewTab }} target="_blank" rel="noopener noreferrer"{{ end }}>{{ .Text | safeHTML }}</a>
