@@ -11,6 +11,17 @@
   command = "hugo server --port 1313 --bind 127.0.0.1"
   targetPort = 1313
 
+# Paper landing pages moved next to their PDFs, which Google Scholar requires.
+[[redirects]]
+  from = "/publications/federation-is-the-way-forward-for-ai-agents/"
+  to = "/papers/HW_FedAgents2026.html"
+  status = 301
+
+[[redirects]]
+  from = "/publications/sw-icmlposition-2026/"
+  to = "/papers/SW_ICMLPosition2026.html"
+  status = 301
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"

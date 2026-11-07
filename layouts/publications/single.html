@@ -1,0 +1,21 @@
+{{ define "main" }}
+<article class="single-wrap">
+  <header class="single-head">
+    <h1>{{ .Title }}</h1>
+    {{ with .Params.authors }}<p>{{ delimit . ", " }}</p>{{ end }}
+    <p class="meta">{{ with .Params.venue }}{{ . }}, {{ end }}{{ .Date.Format "2006" }}</p>
+  </header>
+
+  <div class="single-content prose">
+    {{ with .Params.abstract }}
+    <h2>Abstract</h2>
+    <p>{{ . }}</p>
+    {{ end }}
+    <p>
+      {{ with .Params.pdf }}<a href="{{ . }}" target="_blank" rel="noopener noreferrer">Download PDF</a>{{ end }}
+      {{ with .Params.arxiv }} · <a href="{{ . }}" target="_blank" rel="noopener noreferrer">arXiv</a>{{ end }}
+    </p>
+    {{ .Content }}
+  </div>
+</article>
+{{ end }}

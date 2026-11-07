@@ -7,6 +7,9 @@
   <meta name="citation_publication_date" content="{{ .Date.Format "2006/01/02" }}">
   <meta name="citation_pdf_url" content="{{ $pdfURL }}">
   <meta name="citation_abstract_html_url" content="{{ .Permalink }}">
+  {{- with .Params.abstract }}
+  <meta name="citation_abstract" content="{{ . }}">
+  {{- end }}
   {{- $venueType := lower (default "" .Params.venue_type) -}}
   {{- with .Params.venue }}
     {{- if eq $venueType "journal" }}
@@ -15,4 +18,25 @@
   <meta name="citation_conference_title" content="{{ . }}">
     {{- end }}
   {{- end }}
+  {{- $authors := slice }}
+  {{- range .Params.authors }}
+    {{- $authors = $authors | append (dict "@type" "Person" "name" .) }}
+  {{- end }}
+  {{- $article := dict
+    "@context" "https://schema.org"
+    "@type" "ScholarlyArticle"
+    "headline" .Title
+    "name" .Title
+    "author" $authors
+    "datePublished" (.Date.Format "2006-01-02")
+    "url" .Permalink
+    "mainEntityOfPage" .Permalink
+    "encoding" (dict "@type" "MediaObject" "contentUrl" $pdfURL "encodingFormat" "application/pdf")
+  }}
+  {{- with .Params.abstract }}{{ $article = merge $article (dict "abstract" .) }}{{ end }}
+  {{- with .Params.arxiv }}{{ $article = merge $article (dict "sameAs" .) }}{{ end }}
+  {{- if in (slice "conference" "journal") $venueType }}
+    {{- $article = merge $article (dict "isPartOf" (dict "@type" "CreativeWork" "name" .Params.venue)) }}
+  {{- end }}
+  <script type="application/ld+json">{{ $article | jsonify | safeJS }}</script>
 {{- end -}}

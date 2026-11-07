@@ -14,7 +14,7 @@ Reliable agentic AI is a core focus, aimed at systems that remain dependable in 
 Representative papers:
 
 - L. Yuan, W. Fang, S. Wang, C. Brinton, ["PAAC: privacy-aware agentic device-cloud collaboration"](https://arxiv.org/abs/2605.08646), in *Annual Conference on Neural Information Processing Systems (NeurIPS)*, Dec. 2026 (acceptance rate: 25.7%).
-- H. Woisetschläger, N. D. Lane, S. Wang, ["Federation is the way forward for AI agents"](/papers/HW_FedAgents2026.pdf), in *Annual Conference on Neural Information Processing Systems (NeurIPS), Position Paper Track*, Dec. 2026 (acceptance rate: 22.9%).
+- H. Woisetschläger, N. D. Lane, S. Wang, ["Federation is the way forward for AI agents"](/papers/HW_FedAgents2026.pdf), in *Annual Conference on Neural Information Processing Systems (NeurIPS), Position Paper Track*, Dec. 2026 (acceptance rate: 22.9%). [[Abstract]](/papers/HW_FedAgents2026.html)
 - S. Wang, H. Woisetschlager, ["Agentic performance at the edge: insights from benchmarking"](https://arxiv.org/abs/2605.10384), in *Workshop on Autonomic and Agentic AI For IoT and Edge Systems (AutoEdge) in Conjunction with MobiSys 2026*, Jun. 2026.
 
 ## 2) Efficient and effective LLM inference systems

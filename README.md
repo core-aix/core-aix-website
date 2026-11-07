@@ -82,3 +82,11 @@ Podcast mapping rule:
    - YouTube Music (podcast RSS)
 
 Tip: After approval, publishing a new episode is just adding a new blog post + matching MP3 file, then redeploying.
+
+## 8) Add a paper PDF
+
+1. Put the PDF in `static/papers/`.
+2. Run `hugo new publications/my-paper.md` and fill in every field, including the full abstract.
+3. Add the paper to `content/publications/_index.md` with an `[[Abstract]]` link to its landing page.
+
+Keep `url` in the same directory as `pdf`: Google Scholar ignores `citation_pdf_url` otherwise.
