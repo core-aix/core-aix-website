@@ -9,6 +9,6 @@ authors:
   - "Full Name"
 venue: "Full conference or journal name, or Preprint"
 venue_type: "conference" # conference, journal or preprint
-abstract: "Complete abstract from the paper."
+abstract: "Complete abstract, word for word as in the paper."
 # arxiv: "https://arxiv.org/abs/XXXX.XXXXX"
 ---
