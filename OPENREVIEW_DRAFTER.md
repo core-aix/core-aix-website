@@ -72,6 +72,21 @@ here.
   click reconnects it, and edits made in between are merged. A tab in the
   background disconnects after 1 minute and reconnects when it is shown again
   (Liveblocks' `backgroundKeepAliveTimeout`).
+- **Comments.** Signed-in members (and signed-in people on an edit link) can
+  comment on selected text in Standard Markdown. Comments live in the room's
+  Yjs document next to the text (a `comments` map), so they sync live and need
+  nothing on the server. Each one is anchored with Yjs relative positions, so
+  it follows edits. If all of its text is deleted, it stays in the list,
+  marked as such. Versions hold only the text, not comments.
+- **Out-of-date warning.** When the page is offline, has lost its connection,
+  or is paused while idle, a banner says that what it shows may not be the
+  latest version, and names who was in the draft in the last 10 minutes.
+  *Copy* warns in the same way. After reconnecting, the page says so if
+  other people's changes came in.
+- **Editor and preview position.** The text is split into Markdown blocks with
+  marked's lexer, which line up with the preview's top-level elements. With
+  *⇅ Sync* on, scrolling either side scrolls the other to the same block.
+  Double-clicking the preview moves the editor there.
 - **Saving.** There is no save button. The status reads "Saving…" and then
   "Saved". The browser warns before the page closes while edits have not
   reached Liveblocks yet, and before it closes with a changed scratch draft

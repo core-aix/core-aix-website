@@ -15,6 +15,7 @@ import {
   indentWithTab,
   createSpellChecker,
   SPELL_LANGUAGES,
+  createCommentHighlights,
 } from './vendor/collab.js'
 
 /*
@@ -306,6 +307,8 @@ function makeOrEditor() {
         orReadOnly.of([]),
         EditorView.updateListener.of((u) => {
           if (u.selectionSet || u.docChanged) scheduleCounts()
+          if (u.selectionSet) scheduleCursorMark()
+          if (u.transactions.some((t) => t.isUserEvent('input') || t.isUserEvent('delete') || t.isUserEvent('select'))) lastScrolled = 'editor'
           if (!u.docChanged || applyingOr) return
           clearTimeout(orDirtyTimer)
           orDirtyTimer = setTimeout(applyOrEdits, 250)
@@ -313,6 +316,7 @@ function makeOrEditor() {
       ],
     }),
   })
+  watchEditorScroll(orView)
 }
 
 // Replace a CodeMirror document with minimal change, so the cursor stays put.
@@ -392,6 +396,9 @@ function closeDraft() {
   applyOrEditsNow()
   if (draft.creating) handOverText = draft.ytext.toString()
   for (const u of draft.unsubs) u()
+  composing = null
+  activeComment = null
+  $('comment-fab').hidden = true
   spell.forget(draft.latexView)
   draft.latexView.destroy()
   if (draft.leave) draft.leave()
@@ -415,20 +422,27 @@ function mountLatexEditor(d) {
     state: EditorState.create({
       doc: d.ytext.toString(),
       extensions: [
-        keymap.of([...yUndoManagerKeymap, indentWithTab]),
+        keymap.of([...yUndoManagerKeymap, indentWithTab, { key: 'Mod-Alt-m', run: () => startComment() }]),
         basicSetup,
         EditorView.lineWrapping,
         baseTheme,
         placeholder('Write your reply here. Maths as in LaTeX: $x_i$, $$\\sum_i x_i$$ …'),
         yCollab(d.ytext, d.awareness, { undoManager }),
         spell.extension,
+        commentMarks.extension,
         readOnlyExt(d.readOnly),
         EditorView.updateListener.of((u) => {
-          if (u.selectionSet) scheduleCounts()
+          if (u.selectionSet) {
+            scheduleCounts()
+            scheduleCursorMark()
+          }
+          if (u.transactions.some((t) => t.isUserEvent('input') || t.isUserEvent('delete') || t.isUserEvent('select'))) lastScrolled = 'editor'
+          if (u.selectionSet || u.focusChanged || u.geometryChanged) updateFab()
         }),
       ],
     }),
   })
+  watchEditorScroll(d.latexView)
 }
 
 // Recompute the OpenReview Markdown, the preview and the counts from the source.
@@ -468,7 +482,9 @@ function startAutoCreate() {
 function attachDerived(d) {
   const handler = (_event, tr) => {
     scheduleDerive()
+    scheduleComments()
     if (tr?.local) noteLocalEdit()
+    else noteRemoteEdit(d)
   }
   d.ytext.observe(handler)
   d.unsubs.push(() => d.ytext.unobserve(handler))
@@ -527,6 +543,8 @@ async function openDraft(id, { initialText, link } = {}) {
     leave,
     provider,
     unsubs: [],
+    seen: new Map(), // collaborator name -> when last seen here
+    shared: Boolean(link) || (meta.members?.length || 0) > 1,
   }
   draft = d
   orView.dispatch({ effects: orReadOnly.reconfigure(readOnlyExt(d.readOnly)) })
@@ -560,6 +578,10 @@ async function openDraft(id, { initialText, link } = {}) {
   d.unsubs.push(() => provider.off('sync', onSync))
   if (provider.synced) onSync(true)
 
+  const comments = doc.getMap('comments')
+  comments.observeDeep(scheduleComments)
+  d.unsubs.push(() => comments.unobserveDeep(scheduleComments))
+  scheduleComments()
   d.unsubs.push(room.subscribe('others', renderPresence))
   awareness.on('change', renderPresence)
   d.unsubs.push(() => awareness.off('change', renderPresence))
@@ -607,9 +629,18 @@ function avatar({ name, avatar: pic, color }, title) {
 
 // Who else is here, from the editor's awareness states: they carry each
 // person's current name and colour (the same ones their cursor label shows).
+function markSeen(d = draft) {
+  if (!d?.room || idlePaused || d.room.getStatus() !== 'connected') return
+  const now = Date.now()
+  for (const [clientId, state] of d.awareness.getStates()) {
+    if (clientId !== d.doc.clientID && state?.user?.name) d.seen.set(state.user.name, now)
+  }
+}
+
 function renderPresence() {
   const box = $('presence')
   box.innerHTML = ''
+  markSeen()
   if (!draft?.room || idlePaused) return
   const seen = new Set()
   for (const [clientId, state] of draft.awareness.getStates()) {
@@ -623,11 +654,24 @@ function renderPresence() {
 }
 
 function updateSyncStatus() {
+  markSeen()
+  trackLive()
+  renderSyncStatus()
+  updateConnBanner()
+}
+
+function renderSyncStatus() {
   const el = $('sync-status')
   if (!draft) return (el.textContent = '')
   if (!draft.room) {
     el.className = 'sync-status warn'
-    el.textContent = 'Not saved'
+    el.textContent = online ? 'Not saved' : 'Offline · not saved'
+    return
+  }
+  if (!online) {
+    el.className = 'sync-status warn'
+    el.textContent = 'Offline'
+    el.title = 'No internet connection. Edits are kept in this page and sent when it is back.'
     return
   }
   const status = draft.room.getStatus()
@@ -885,6 +929,7 @@ for (const ev of ['keydown', 'pointerdown', 'wheel', 'touchstart']) {
 window.addEventListener('focus', onActivity)
 
 setInterval(() => {
+  markSeen()
   if (!draft?.room || idlePaused || document.hidden) return
   if (Date.now() - lastActivity < IDLE_MS) return
   if (client?.getSyncStatus() === 'synchronizing') return // never drop unsaved edits
@@ -916,6 +961,7 @@ function renderToolbar() {
   t.disabled = !draft?.id || draft.guest
   $('share').hidden = !draft?.id || draft.guest
   $('history').hidden = !draft?.id || draft.guest
+  $('comments-btn').hidden = !draft?.room
   $('delete-draft').hidden = !(draft?.id && !draft.guest && draft.owner === session?.user.email)
   updateSyncStatus()
   updateScratchBanner()
@@ -1026,6 +1072,8 @@ function renderPreview(text) {
       await MathJax.startup.promise
       await MathJax.typesetPromise([preview]).catch(() => console.warn('Could not typeset TeX content'))
     }
+    markCursorBlock()
+    if (syncOn && lastScrolled !== 'preview') syncFrom('editor')
   })
 }
 
@@ -1041,6 +1089,8 @@ function showTab(tab) {
     tab === 'latex' ? 'Maths as in LaTeX, no extra escaping' : 'Exactly what you paste into OpenReview'
   ;(tab === 'latex' ? draft?.latexView : orView)?.requestMeasure()
   scheduleCounts()
+  updateFab()
+  requestAnimationFrame(() => syncFrom('editor'))
 }
 document.querySelectorAll('.tab').forEach((t) =>
   t.addEventListener('click', () => {
@@ -1076,6 +1126,8 @@ $('copy').addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(draft.or)
     btn.textContent = 'Copied ✓'
+    const warning = staleWarning()
+    if (warning) toast(`Copied, but ${warning}`, 'error')
   } catch {
     btn.textContent = 'Copy failed'
   }
@@ -1094,6 +1146,561 @@ $('download').addEventListener('click', () => {
   a.remove()
   setTimeout(() => URL.revokeObjectURL(a.href), 1000)
 })
+
+
+// ---------------------------------------------------------------- connection: offline, idle, out of date
+/*
+ * While the page isn't connected (offline, connection lost, or paused while
+ * idle), what it shows can be behind what others have written. A banner says
+ * so, naming the people who were here recently.
+ */
+let online = navigator.onLine
+window.addEventListener('online', () => {
+  online = true
+  updateSyncStatus()
+})
+window.addEventListener('offline', () => {
+  online = false
+  updateSyncStatus()
+})
+
+const RECENT_MS = 10 * 60_000
+const isLive = (d = draft) => Boolean(d?.room) && online && !idlePaused && d.room.getStatus() === 'connected'
+const nameList = (names) =>
+  names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+
+function othersRecently(d = draft) {
+  const now = Date.now()
+  return [...(d?.seen || [])].filter(([, t]) => now - t < RECENT_MS).map(([n]) => n)
+}
+
+// Note when the connection drops and comes back, to say "caught up" afterwards.
+function trackLive() {
+  const d = draft
+  if (!d?.room) return
+  if (isLive(d)) {
+    if (d.lostAt) {
+      d.lostAt = null
+      d.catchingUp = Date.now()
+    }
+    d.wasLive = true
+  } else if (d.wasLive && !d.lostAt) {
+    d.lostAt = Date.now()
+  }
+}
+
+function noteRemoteEdit(d) {
+  d.lastRemoteEdit = Date.now()
+  if (d.catchingUp && Date.now() - d.catchingUp < 10_000) toast('Updated with changes made while you were away.')
+  d.catchingUp = 0
+}
+
+function notLive(d = draft) {
+  if (!d?.room) return false
+  const status = d.room.getStatus()
+  return !online || idlePaused || status === 'disconnected' || status === 'reconnecting' || (d.wasLive && status !== 'connected')
+}
+
+// Why the text may be out of date, or '' when it isn't.
+function staleWarning(d = draft) {
+  if (!d?.room) return ''
+  if (notLive(d)) {
+    const others = othersRecently(d)
+    const why = !online ? 'you are offline' : idlePaused ? 'the page is paused while idle' : 'the connection was lost'
+    if (others.length) return `${why} and ${nameList(others)} ${others.length > 1 ? 'were' : 'was'} editing, so this may not be the latest version.`
+    if (d.shared) return `${why}, so changes others made meanwhile are missing.`
+    return ''
+  }
+  if (d.lastRemoteEdit && Date.now() - d.lastRemoteEdit < 5000) {
+    const others = othersRecently(d)
+    return `${others.length ? nameList(others) : 'someone'} is still editing, so it may change.`
+  }
+  return ''
+}
+
+function updateConnBanner() {
+  const b = $('conn-banner')
+  const d = draft
+  let html = ''
+  if (!online && !d?.room) {
+    html = '<b>You are offline.</b> Converting and the preview still work; signing in and saved drafts need a connection.'
+  } else if (notLive(d)) {
+    const head = !online ? '<b>You are offline.</b>' : idlePaused ? '<b>Paused while idle.</b>' : '<b>Connection lost, reconnecting…</b>'
+    const others = othersRecently(d)
+    const stale = others.length
+      ? `${esc(nameList(others))} ${others.length > 1 ? 'were' : 'was'} also editing, so this <b>may not be the latest version</b>.`
+      : d.shared
+        ? 'Others with access may have changed it since, so this <b>may not be the latest version</b>.'
+        : ''
+    const tail = idlePaused
+      ? 'Click or type to catch up.'
+      : d.readOnly
+        ? 'It updates when the connection is back.'
+        : 'You can keep editing: your changes stay in this page and merge with theirs when the connection is back. Don’t close the page until it says Saved.'
+    html = [head, stale, tail].filter(Boolean).join(' ')
+  }
+  b.hidden = !html
+  b.innerHTML = html
+}
+
+// ---------------------------------------------------------------- comments
+/*
+ * Notes on parts of the text, for signed-in people. They are kept in the
+ * draft's Yjs document next to the text (a Y.Map "comments" of Y.Maps), so they
+ * sync live like the text. Each one is anchored by Yjs relative positions
+ * (the start sticks to the first character, the end to the last), so its range
+ * follows edits; if all of its text is deleted the comment stays, marked as
+ * such. Highlights show in the standard Markdown editor.
+ */
+const commentMarks = createCommentHighlights({ onClick: (id) => openComments(id) })
+let commentsOpen = false
+let activeComment = null
+let composing = null // { from, to: relative positions, quote } for a comment being written
+let showResolved = false
+let commentsFrame = 0
+let commentsSig = ''
+
+const canComment = () => Boolean(session && draft?.room && !draft.readOnly)
+const me = () => ({
+  email: session.user.email,
+  name: session.user.name,
+  picture: session.user.picture || '',
+  color: colourFor(session.user.email),
+})
+const relPos = (d, index, assoc) => Y.relativePositionToJSON(Y.createRelativePositionFromTypeIndex(d.ytext, index, assoc))
+function absPos(d, json) {
+  try {
+    const abs = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(json), d.doc)
+    return abs && abs.type === d.ytext ? abs.index : null
+  } catch {
+    return null
+  }
+}
+
+function readComments(d = draft) {
+  if (!d?.room) return []
+  const out = []
+  for (const [id, m] of d.doc.getMap('comments')) {
+    if (!(m instanceof Y.Map)) continue
+    const c = m.toJSON()
+    const from = absPos(d, c.from)
+    const to = absPos(d, c.to)
+    out.push({ ...c, id, from, to, orphan: from == null || to == null || to <= from, ymap: m })
+  }
+  out.sort((a, b) => a.orphan - b.orphan || (a.from ?? 0) - (b.from ?? 0) || a.created - b.created)
+  return out
+}
+
+function scheduleComments() {
+  cancelAnimationFrame(commentsFrame)
+  commentsFrame = requestAnimationFrame(refreshComments)
+}
+
+function refreshComments() {
+  const d = draft
+  const btn = $('comments-btn')
+  if (!d?.room || !d.latexView) {
+    if (commentsOpen) closeComments()
+    return
+  }
+  const list = readComments(d)
+  const ranges = list.filter((c) => !c.resolved && !c.orphan).map((c) => ({ id: c.id, from: c.from, to: c.to }))
+  if (composing) {
+    const from = absPos(d, composing.from)
+    const to = absPos(d, composing.to)
+    if (from != null && to != null) ranges.push({ id: '__new', from, to })
+  }
+  commentMarks.set(d.latexView, ranges, composing ? '__new' : activeComment)
+  const open = list.filter((c) => !c.resolved).length
+  btn.textContent = open ? `Comments (${open})` : 'Comments'
+  btn.classList.toggle('active', commentsOpen)
+  const sig = JSON.stringify([
+    list.map((c) => [c.id, c.text, c.resolved, c.replies?.length, c.orphan, c.from]),
+    activeComment,
+    showResolved,
+    Boolean(composing),
+    canComment(),
+  ])
+  if (commentsOpen && sig !== commentsSig) renderCommentsPanel(list)
+  commentsSig = commentsOpen ? sig : ''
+}
+
+function openComments(id) {
+  if (!draft?.room) return
+  commentsOpen = true
+  if (id) {
+    activeComment = id
+    composing = null
+  }
+  $('comments-panel').hidden = false
+  commentsSig = ''
+  refreshComments()
+  if (id) $('comments-panel').querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' })
+}
+
+function closeComments() {
+  commentsOpen = false
+  activeComment = null
+  composing = null
+  $('comments-panel').hidden = true
+  scheduleComments()
+}
+
+$('comments-btn').addEventListener('click', () => (commentsOpen ? closeComments() : openComments()))
+
+function startComment() {
+  const d = draft
+  if (!d?.latexView) return false
+  if (!d.room) return toast('Sign in to save drafts and comment on them.'), true
+  if (!canComment()) return toast(session ? 'This draft is view only.' : 'Sign in with Google to comment.'), true
+  if (prefs.tab !== 'latex') showTab('latex')
+  const r = d.latexView.state.selection.main
+  if (r.empty) return toast('Select some text in Standard Markdown first.'), true
+  composing = { from: relPos(d, r.from, 0), to: relPos(d, r.to, -1), quote: d.latexView.state.sliceDoc(r.from, r.to).slice(0, 400) }
+  activeComment = null
+  $('comment-fab').hidden = true
+  openComments()
+  requestAnimationFrame(() => $('comments-panel').querySelector('textarea[data-for="__new"]')?.focus())
+  return true
+}
+
+const clip = (s, n = 140) => (s.length > n ? s.slice(0, n).trimEnd() + '…' : s)
+const ago = (t) => {
+  const s = (Date.now() - t) / 1000
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`
+  return new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+}
+
+function renderCommentsPanel(list = readComments()) {
+  const panel = $('comments-panel')
+  // Keep what people are typing across re-renders.
+  const typed = new Map([...panel.querySelectorAll('textarea[data-for]')].map((t) => [t.dataset.for, t.value]))
+  const focused = document.activeElement?.closest?.('#comments-panel textarea')?.dataset.for
+  const mine = session?.user.email
+  const can = canComment()
+  const open = list.filter((c) => !c.resolved)
+  const resolved = list.filter((c) => c.resolved)
+  const head = (who, when) =>
+    `<div class="c-head"><span class="c-av" data-name="${esc(who?.name || '?')}" data-pic="${esc(who?.picture || '')}" data-color="${esc(who?.color || '#999')}"></span><b>${esc(who?.name || 'Someone')}</b><small>${esc(ago(when))}</small></div>`
+  const card = (c) => {
+    const quote = c.orphan
+      ? `<div class="c-quote orphan" title="${esc(c.quote || '')}">The text this was on has been removed: “${esc(clip(c.quote || ''))}”</div>`
+      : `<button type="button" class="c-quote" data-act="goto" title="Show in the editor">“${esc(clip(c.quote || ''))}”</button>`
+    const replies = (c.replies || []).map((r) => `<div class="c-reply">${head(r.author, r.created)}<div class="c-text">${esc(r.text)}</div></div>`).join('')
+    const canDelete = can && (c.author?.email === mine || draft.owner === mine)
+    const actions = can
+      ? `<div class="c-actions">
+          ${c.resolved ? '' : `<textarea data-for="${esc(c.id)}" rows="1" placeholder="Reply…"></textarea><button type="button" data-act="reply">Reply</button>`}
+          <button type="button" data-act="${c.resolved ? 'reopen' : 'resolve'}">${c.resolved ? 'Reopen' : 'Resolve'}</button>
+          ${canDelete ? '<button type="button" class="danger" data-act="delete">Delete</button>' : ''}
+        </div>`
+      : ''
+    const resolvedNote = c.resolved ? `<div class="c-resolved">Resolved by ${esc(c.resolved.by || 'someone')} · ${esc(ago(c.resolved.at))}</div>` : ''
+    return `<div class="comment${c.id === activeComment ? ' active' : ''}${c.resolved ? ' resolved' : ''}" data-id="${esc(c.id)}">
+      ${head(c.author, c.created)}${quote}<div class="c-text">${esc(c.text)}</div>${replies}${resolvedNote}${actions}</div>`
+  }
+  const composer = composing
+    ? `<div class="comment composing" data-id="__new"><div class="c-quote">“${esc(clip(composing.quote))}”</div>
+        <textarea data-for="__new" rows="3" placeholder="Add a comment… (Ctrl/⌘ + Enter to post)"></textarea>
+        <div class="c-actions"><button type="button" class="primary" data-act="post">Comment</button><button type="button" data-act="cancel">Cancel</button></div></div>`
+    : ''
+  const hint = !session
+    ? '<p class="c-hint">Sign in with Google to add comments.</p>'
+    : !can
+      ? '<p class="c-hint">This draft is view only.</p>'
+      : composing
+        ? ''
+        : '<p class="c-hint">Select text in <b>Standard Markdown</b> and click <b>💬 Comment</b> (or Ctrl/⌘ + Alt + M).</p>'
+  panel.innerHTML = `<div class="c-top"><b>Comments</b><button type="button" class="c-close" data-act="close" aria-label="Close comments">×</button></div>
+    <div class="c-list">${hint}${composer}${open.map(card).join('') || (composing ? '' : '<p class="c-empty">No open comments.</p>')}
+    ${resolved.length ? `<button type="button" class="link c-toggle" data-act="toggle-resolved">${showResolved ? 'Hide' : 'Show'} resolved (${resolved.length})</button>` : ''}
+    ${showResolved ? resolved.map(card).join('') : ''}</div>`
+  for (const el of panel.querySelectorAll('.c-av')) {
+    el.replaceWith(avatar({ name: el.dataset.name, avatar: el.dataset.pic, color: el.dataset.color }, el.dataset.name))
+  }
+  for (const t of panel.querySelectorAll('textarea[data-for]')) {
+    if (typed.has(t.dataset.for)) t.value = typed.get(t.dataset.for)
+    if (t.dataset.for === focused) t.focus()
+  }
+}
+
+function findComment(id) {
+  const m = draft?.doc.getMap('comments').get(id)
+  return m instanceof Y.Map ? m : null
+}
+
+function showCommentInEditor(id) {
+  const c = readComments().find((x) => x.id === id)
+  if (!c || c.orphan) return
+  if (prefs.tab !== 'latex') showTab('latex')
+  const v = draft.latexView
+  v.dispatch({ selection: { anchor: c.from, head: c.to }, effects: EditorView.scrollIntoView(c.from, { y: 'center' }) })
+  v.focus()
+}
+
+async function commentAction(act, id, card) {
+  const d = draft
+  if (act === 'close') return closeComments()
+  if (act === 'toggle-resolved') {
+    showResolved = !showResolved
+    return refreshComments()
+  }
+  if (act === 'cancel') {
+    composing = null
+    return refreshComments()
+  }
+  if (act === 'post') {
+    const text = card.querySelector('textarea').value.trim()
+    if (!text || !composing || !canComment()) return
+    const m = new Y.Map()
+    const c = composing
+    d.doc.transact(() => {
+      d.doc.getMap('comments').set(crypto.randomUUID(), m)
+      m.set('from', c.from)
+      m.set('to', c.to)
+      m.set('quote', c.quote)
+      m.set('text', text.slice(0, 5000))
+      m.set('author', me())
+      m.set('created', Date.now())
+      m.set('resolved', null)
+      m.set('replies', new Y.Array())
+    }, 'comments')
+    composing = null
+    return refreshComments()
+  }
+  activeComment = id
+  if (act === 'goto') {
+    refreshComments()
+    return showCommentInEditor(id)
+  }
+  const m = findComment(id)
+  if (!m || !canComment()) return
+  if (act === 'reply') {
+    const t = card.querySelector('textarea')
+    const text = t.value.trim()
+    if (!text) return t.focus()
+    t.value = ''
+    m.get('replies')?.push([{ author: me(), text: text.slice(0, 5000), created: Date.now() }])
+  } else if (act === 'resolve') {
+    m.set('resolved', { by: session.user.name, at: Date.now() })
+    activeComment = null
+  } else if (act === 'reopen') {
+    m.set('resolved', null)
+  } else if (act === 'delete') {
+    const r = await ask({
+      title: 'Delete this comment?',
+      html: '<p>The comment and its replies are removed for everyone.</p>',
+      buttons: [
+        { label: 'Delete', value: 'ok', kind: 'danger-solid' },
+        { label: 'Cancel', value: null },
+      ],
+    })
+    if (r.button !== 'ok') return
+    d.doc.getMap('comments').delete(id)
+    activeComment = null
+  }
+  refreshComments()
+}
+
+$('comments-panel').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]')
+  const card = e.target.closest('.comment')
+  if (b) return void commentAction(b.dataset.act, card?.dataset.id, card)
+  if (card && card.dataset.id !== '__new' && card.dataset.id !== activeComment && !e.target.closest('textarea')) {
+    activeComment = card.dataset.id
+    refreshComments()
+  }
+})
+$('comments-panel').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.matches('textarea')) {
+    e.preventDefault()
+    const card = e.target.closest('.comment')
+    commentAction(card.dataset.id === '__new' ? 'post' : 'reply', card.dataset.id, card)
+  } else if (e.key === 'Escape' && composing) {
+    composing = null
+    refreshComments()
+  }
+})
+
+// The floating "Comment" button next to a selection in the standard Markdown editor.
+const fab = $('comment-fab')
+function updateFab() {
+  const v = draft?.latexView
+  const r = v?.state.selection.main
+  if (!v || !canComment() || prefs.tab !== 'latex' || !r || r.empty || !v.hasFocus) return void (fab.hidden = true)
+  const c = v.coordsAtPos(r.head)
+  const host = $('latex-editor').getBoundingClientRect()
+  if (!c || c.bottom < host.top || c.top > host.bottom) return void (fab.hidden = true)
+  fab.hidden = false
+  const top = Math.min(Math.max(c.bottom + 6, host.top + 4), host.bottom - fab.offsetHeight - 4)
+  fab.style.top = `${top}px`
+  fab.style.left = `${Math.max(host.left + 4, Math.min(c.left, host.right - fab.offsetWidth - 12))}px`
+}
+fab.addEventListener('pointerdown', (e) => e.preventDefault()) // keep the editor's selection
+fab.addEventListener('click', () => startComment())
+
+// ---------------------------------------------------------------- editor ⇄ preview position
+/*
+ * The text is split into Markdown blocks (paragraphs, lists, headings, …) with
+ * marked's lexer, which matches the preview's top-level elements one to one.
+ * Scrolling either side scrolls the other to the same block (and the same
+ * fraction of it); the block with the cursor is marked in the preview, and
+ * double-clicking the preview moves the editor there. If the blocks don't
+ * line up, scrolling falls back to the same fraction of the whole.
+ */
+let syncOn = prefs.sync !== false
+let lastScrolled = 'editor'
+let ignoreScroll = { editor: 0, preview: 0 } // our own scrolls, not to be echoed back
+const previewScroll = $('preview-scroll')
+const blockCache = new Map()
+
+function blocksOf(text) {
+  if (blockCache.has(text)) return blockCache.get(text)
+  const out = []
+  let pos = 0
+  try {
+    for (const t of marked.lexer(text)) {
+      if (t.type !== 'space' && t.type !== 'def') out.push({ from: pos, to: pos + t.raw.length })
+      pos += t.raw.length
+    }
+  } catch {
+    /* fall back to proportional scrolling */
+  }
+  if (blockCache.size > 4) blockCache.clear()
+  blockCache.set(text, out)
+  return out
+}
+
+const activeView = () => (prefs.tab === 'latex' ? draft?.latexView : orView)
+
+// The editor's blocks and the preview's elements, when they line up.
+function blockMap() {
+  const view = activeView()
+  if (!view) return null
+  const blocks = blocksOf(view.state.doc.toString())
+  const els = [...preview.children]
+  return blocks.length && blocks.length === els.length ? { view, blocks, els } : { view, blocks: null, els }
+}
+
+function elBox(el) {
+  const top = el.getBoundingClientRect().top - previewScroll.getBoundingClientRect().top + previewScroll.scrollTop
+  return { top, bottom: top + el.getBoundingClientRect().height }
+}
+function lineBox(view, { from, to }) {
+  const end = Math.max(from, Math.min(to, view.state.doc.length) - 1)
+  return { top: view.lineBlockAt(from).top, bottom: view.lineBlockAt(end).bottom }
+}
+
+// Which box the position y falls in (or the next one), and how far through it.
+function locate(boxes, y) {
+  for (let i = 0; i < boxes.length; i++) {
+    const b = boxes[i]
+    if (b.bottom > y) return { i, frac: b.bottom > b.top ? Math.max(0, Math.min(1, (y - b.top) / (b.bottom - b.top))) : 0 }
+  }
+  return null
+}
+
+function ownScroll(target, el) {
+  ignoreScroll[target] = Date.now()
+  return el
+}
+
+function syncFrom(source, refine = true) {
+  if (!syncOn || !draft) return
+  const m = blockMap()
+  if (!m) return
+  const ed = m.view.scrollDOM
+  const [from, to] = source === 'editor' ? [ed, previewScroll] : [previewScroll, ed]
+  const target = source === 'editor' ? 'preview' : 'editor'
+  const max = (el) => el.scrollHeight - el.clientHeight
+  let y
+  if (from.scrollTop <= 1) y = 0
+  else if (from.scrollTop >= max(from) - 1) y = max(to)
+  else if (m.blocks) {
+    const edBoxes = m.blocks.map((b) => lineBox(m.view, b))
+    const pvBoxes = m.els.map(elBox)
+    const [src, dst] = source === 'editor' ? [edBoxes, pvBoxes] : [pvBoxes, edBoxes]
+    // In the editor, measure from below its top padding.
+    const offset = source === 'editor' ? m.view.documentTop - ed.getBoundingClientRect().top + ed.scrollTop : 0
+    const hit = locate(src, from.scrollTop - offset)
+    if (!hit) y = max(to)
+    else {
+      const b = dst[hit.i]
+      const dOffset = target === 'editor' ? m.view.documentTop - ed.getBoundingClientRect().top + ed.scrollTop : 0
+      y = b.top + hit.frac * (b.bottom - b.top) + dOffset
+    }
+  } else {
+    y = (from.scrollTop / Math.max(1, max(from))) * max(to)
+  }
+  if (Math.abs(to.scrollTop - y) < 2) return
+  ownScroll(target, to).scrollTop = y
+  // The editor only knows the real height of lines it has drawn; once it has
+  // drawn the new ones, correct the position.
+  if (refine && target === 'editor') requestAnimationFrame(() => requestAnimationFrame(() => syncFrom(source, false)))
+}
+
+let syncFrame = 0
+function onScrolled(source) {
+  if (Date.now() - ignoreScroll[source] < 120) return // the echo of our own scroll
+  lastScrolled = source
+  if (source === 'editor') updateFab()
+  if (!syncOn) return
+  cancelAnimationFrame(syncFrame)
+  syncFrame = requestAnimationFrame(() => syncFrom(source))
+}
+function watchEditorScroll(view) {
+  view.scrollDOM.addEventListener('scroll', () => view === activeView() && onScrolled('editor'), { passive: true })
+}
+previewScroll.addEventListener('scroll', () => onScrolled('preview'), { passive: true })
+
+// Mark the preview block that holds the editor's cursor.
+let cursorFrame = 0
+function scheduleCursorMark() {
+  cancelAnimationFrame(cursorFrame)
+  cursorFrame = requestAnimationFrame(markCursorBlock)
+}
+function markCursorBlock() {
+  preview.querySelector(':scope > .sync-current')?.classList.remove('sync-current')
+  if (!syncOn) return
+  const m = blockMap()
+  if (!m?.blocks) return
+  const head = m.view.state.selection.main.head
+  let i = m.blocks.findIndex((b) => head < b.to)
+  if (i < 0) i = m.blocks.length - 1
+  m.els[i]?.classList.add('sync-current')
+}
+
+// Double-click in the preview: put the editor's cursor at that block.
+preview.addEventListener('dblclick', (e) => {
+  const m = blockMap()
+  if (!m) return
+  const el = [...preview.children].find((c) => c.contains(e.target))
+  if (!el) return
+  const i = m.els.indexOf(el)
+  let pos
+  if (m.blocks) pos = m.blocks[i].from
+  else pos = Math.round((i / Math.max(1, m.els.length)) * m.view.state.doc.length)
+  const line = m.view.state.doc.lineAt(pos)
+  window.getSelection()?.removeAllRanges()
+  m.view.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 40 }) })
+  m.view.focus()
+  lastScrolled = 'editor'
+  requestAnimationFrame(() => syncFrom('editor'))
+})
+
+function setSync(on) {
+  syncOn = on
+  prefs.sync = on
+  savePrefs()
+  const b = $('sync-scroll')
+  b.setAttribute('aria-pressed', String(on))
+  b.classList.toggle('on', on)
+  markCursorBlock()
+  if (on) syncFrom('editor')
+}
+$('sync-scroll').addEventListener('click', () => setSync(!syncOn))
 
 // ---------------------------------------------------------------- drafts: list, new, open, rename, delete
 async function refreshDrafts() {
@@ -1578,6 +2185,7 @@ window.addEventListener('beforeunload', (e) => {
 })
 
 async function start() {
+  setSync(syncOn)
   setZoom(Number(prefs.zoom) || 1)
   setSplit(Number(prefs.split) || 50, false)
   const langSel = $('spell-lang')

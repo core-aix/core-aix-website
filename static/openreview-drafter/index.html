@@ -70,6 +70,7 @@
     <div class="group right">
       <div id="presence" class="presence" aria-label="People editing this draft"></div>
       <span id="sync-status" class="sync-status"></span>
+      <button id="comments-btn" hidden title="Notes on parts of the text (Ctrl/⌘ + Alt + M on a selection)">Comments</button>
       <button id="history" hidden title="Saved versions of this draft">History</button>
       <button id="share" hidden>Share</button>
       <span id="count" class="count"></span>
@@ -78,6 +79,7 @@
   </div>
 
   <div id="banner" class="banner" role="status" hidden></div>
+  <div id="conn-banner" class="banner warn" role="alert" hidden></div>
 
   <main>
     <section class="pane">
@@ -98,9 +100,11 @@
     <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" aria-label="Resize the editor and the preview"
       tabindex="0" title="Drag to resize. Double-click to reset."></div>
 
-    <section class="pane">
+    <section class="pane preview-pane">
       <div class="pane-head">
         Preview (as on OpenReview)
+        <button id="sync-scroll" class="sync-toggle" aria-pressed="true"
+          title="Keep the preview at the same place as the editor, both ways. Double-click the preview to jump the editor there.">⇅ Sync</button>
         <div class="zoom" title="Zoom the preview (or Ctrl/⌘ + scroll over it)">
           <button id="zoom-out" aria-label="Zoom out">−</button>
           <button id="zoom-reset" aria-label="Reset zoom">100%</button>
@@ -114,8 +118,10 @@
           </div>
         </div>
       </div>
+      <aside id="comments-panel" class="comments-panel" aria-label="Comments" hidden></aside>
     </section>
   </main>
+  <button id="comment-fab" class="comment-fab" type="button" hidden title="Comment on the selected text (Ctrl/⌘ + Alt + M)">💬 Comment</button>
 
   <dialog id="dialog">
     <form method="dialog">
