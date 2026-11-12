@@ -70,6 +70,7 @@
     <div class="group right">
       <div id="presence" class="presence" aria-label="People editing this draft"></div>
       <span id="sync-status" class="sync-status"></span>
+      <button id="history" hidden title="Saved versions of this draft">History</button>
       <button id="share" hidden>Share</button>
       <span id="count" class="count"></span>
       <button id="copy" class="primary">Copy for OpenReview</button>
@@ -82,10 +83,13 @@
     <section class="pane">
       <div class="pane-head tabs" role="tablist">
         <button role="tab" class="tab active" data-tab="latex"
-          title="Write math as in a paper. Everyone editing this draft sees changes live.">Plain LaTeX</button>
+          title="Write maths as in a paper. Everyone editing this draft sees changes live.">Plain LaTeX</button>
         <button role="tab" class="tab" data-tab="or"
           title="Exactly what gets pasted into OpenReview. Edits here update the plain LaTeX.">OpenReview text</button>
         <span id="tab-hint" class="tab-hint"></span>
+        <span id="spell-status" class="spell-status"></span>
+        <label for="spell-lang" class="sr-only">Spell-check language</label>
+        <select id="spell-lang" class="spell-lang" title="Spell-check language. Right-click an underlined word for suggestions."></select>
       </div>
       <div id="latex-editor" class="cm-host"></div>
       <div id="or-editor" class="cm-host" hidden></div>

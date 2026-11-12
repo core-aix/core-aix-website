@@ -15,7 +15,8 @@ static/openreview-drafter/        the page (copied from the openreview-markdown 
   index.html, app.js, style.css
   escape.js                       LaTeX <-> OpenReview text conversion
   or-render.js                    OpenReview's own Markdown settings
-  vendor/collab.js                CodeMirror, Yjs and the Liveblocks client, bundled
+  vendor/collab.js                CodeMirror, Yjs, the Liveblocks client and the spell checker, bundled
+  vendor/spell-worker.js          nspell, which checks spelling in a background worker
 netlify/functions/drafts.mjs      sign-in, sharing and Liveblocks access
 ```
 
@@ -48,6 +49,23 @@ here.
   token for that one room only, and it is read-only for a *view* link. The
   token sits after `#`, so browsers never send it to the server in the page
   request.
+- **Versions.** The function saves versions in Netlify Blobs
+  (`ver/<id>/<time>` holds `{at, by, text, note}`). The page asks for one a
+  minute after someone stops typing, at least every five minutes while they
+  keep typing, and when the page is hidden or goes idle. The function then
+  reads the text from Liveblocks itself and stores it only if it changed, at
+  most once every two minutes, keeping the latest 300 per draft. *History*
+  lists a draft's versions; each can be viewed, downloaded or restored.
+  Restoring first saves the current text as a version, so it can be undone.
+- **Deleted drafts.** Deleting saves a last version and keeps a record
+  (`del/<id>`, with `delidx/<email>/<id>` for each member). *Deleted drafts…*
+  at the bottom of the drafts list shows them to everyone who was a member,
+  with their versions. The owner can restore a draft, with its members and
+  its latest text, or delete it for good, which also removes its versions.
+- **Spell check.** Hunspell dictionaries for ten languages load on demand from
+  jsdelivr and are checked in a background worker. Maths, LaTeX commands,
+  code, URLs and HTML are skipped. Right-click an underlined word for
+  suggestions, *Add to dictionary* (kept in that browser) or *Ignore*.
 - **Idle connections.** Liveblocks bills by connection time. A visible page
   with no key press, click, scroll or touch for 5 minutes disconnects, once
   everything is saved, and shows "Paused while idle". The next key press or

@@ -19,6 +19,14 @@
  * "off", and can reset it, which makes the old link stop working. Guests get a
  * Liveblocks access token for that one room, read-only when the link is "view".
  *
+ * Versions. Liveblocks' own history is short on the free plan, so versions are
+ * kept in Netlify Blobs: ver/<id>/<time> holds {at, by, text}. The page asks
+ * for a snapshot while people edit; this function then reads the text from
+ * Liveblocks itself and stores it if it changed, at most every two minutes.
+ * Deleting a draft saves a last version first and keeps a record
+ * (del/<id>, plus delidx/<email>/<id> for each member), so the draft can be
+ * downloaded or restored later.
+ *
  * Endpoints, all under /api/drafts. Those marked * need
  * "Authorization: Bearer <session token>"; the others take it if present.
  *
@@ -34,6 +42,13 @@
  * * POST   /members          {id}          names of the people it is shared with
  * * POST   /link             {id}          any member: the share link, created on first use
  * * POST   /link-settings    {id, mode, reset}  the owner: edit / view / off, or a new link
+ * * POST   /versions         {id}          a draft's saved versions (also a deleted draft's)
+ * * POST   /version          {id, key}     one version's text
+ * * POST   /restore-version  {id, key}     any member: put an old version back
+ * * GET    /deleted                        deleted drafts the user was a member of
+ * * POST   /restore-deleted  {id}          the owner: bring a deleted draft back
+ * * POST   /purge-deleted    {id}          the owner: delete a deleted draft for good
+ *   POST   /snapshot         {id, linkToken?, force?}  save a version if the text changed
  *   POST   /link-open        {token}       what a share link opens
  *   POST   /liveblocks-auth  {room, linkToken?, guestId?, guestName?}
  *                                           Liveblocks' auth endpoint, for members and guests
@@ -46,6 +61,7 @@
 import { getStore } from '@netlify/blobs';
 import { Liveblocks } from '@liveblocks/node';
 import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose';
+import * as Y from 'yjs';
 
 export const config = { path: ['/api/drafts', '/api/drafts/*'] };
 
@@ -57,6 +73,13 @@ const MAX_BODY = 16 * 1024;
 const MAX_TITLE = 120;
 const MAX_MEMBERS = 50;
 const WRITE = ['room:write'];
+const VERSION_PREFIX = 'ver/';
+const VERSION_LAST = 'verlast/';
+const DELETED_PREFIX = 'del/';
+const DELETED_INDEX = 'delidx/';
+const VERSION_MIN_GAP_MS = 2 * 60 * 1000;
+const MAX_VERSIONS = 300;
+const VERSION_KEY = /^ver\/ord-[A-Za-z0-9_-]{16,64}\/[0-9TZ:.-]{20,30}$/;
 const LINK_MODES = ['edit', 'view', 'off'];
 const DEFAULT_LINK_MODE = 'edit';
 const LINK_TOKEN = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, base64url
@@ -284,6 +307,115 @@ async function roomForLink(token) {
   return room;
 }
 
+/* ------------------------------------------------------------------ */
+/* Versions                                                            */
+/* ------------------------------------------------------------------ */
+
+const blobs = () => getStore(STORE);
+const sha256 = async (text) =>
+  Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))).toString('base64url');
+
+/* The draft's text as Liveblocks holds it right now. */
+async function roomText(id) {
+  const update = await liveblocks().getYjsDocumentAsBinaryUpdate(id);
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, new Uint8Array(update));
+  return doc.getText('latex').toString();
+}
+
+/* Replace the draft's text, as one Yjs update that open pages merge in. Only
+ * the part that differs is changed, so people's cursors elsewhere stay put. */
+async function setRoomText(id, text) {
+  const update = await liveblocks().getYjsDocumentAsBinaryUpdate(id);
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, new Uint8Array(update));
+  const before = Y.encodeStateVector(doc);
+  const ytext = doc.getText('latex');
+  const old = ytext.toString();
+  let p = 0;
+  const max = Math.min(old.length, text.length);
+  while (p < max && old[p] === text[p]) p++;
+  let q = 0;
+  while (q < max - p && old[old.length - 1 - q] === text[text.length - 1 - q]) q++;
+  doc.transact(() => {
+    if (old.length - q > p) ytext.delete(p, old.length - q - p);
+    if (text.length - q > p) ytext.insert(p, text.slice(p, text.length - q));
+  });
+  await liveblocks().sendYjsBinaryUpdate(id, Y.encodeStateAsUpdate(doc, before));
+}
+
+/* Store the current text as a version if it changed. `force` skips the
+ * two-minute spacing (used before deleting or restoring). */
+async function snapshot(id, by, { force = false, note = '' } = {}) {
+  const store = blobs();
+  const text = await roomText(id);
+  const hash = await sha256(text);
+  const last = await store.get(VERSION_LAST + id, { type: 'json' });
+  if (last?.hash === hash) return { saved: false, reason: 'unchanged' };
+  const since = last ? Date.now() - Date.parse(last.at) : Infinity;
+  if (!force && since < VERSION_MIN_GAP_MS) return { saved: false, reason: 'recent', retryIn: VERSION_MIN_GAP_MS - since };
+  if (!text && !last) return { saved: false, reason: 'empty' };
+  const at = new Date().toISOString();
+  const key = `${VERSION_PREFIX}${id}/${at}`;
+  await store.setJSON(key, { at, by, text, note });
+  await store.setJSON(VERSION_LAST + id, { key, hash, at });
+  await pruneVersions(id);
+  return { saved: true, key };
+}
+
+async function versionKeys(id) {
+  const { blobs: items } = await blobs().list({ prefix: `${VERSION_PREFIX}${id}/` });
+  return items.map((b) => b.key).sort();
+}
+
+async function pruneVersions(id) {
+  const keys = await versionKeys(id);
+  const extra = keys.length - MAX_VERSIONS;
+  for (const key of keys.slice(0, Math.max(0, extra))) await blobs().delete(key);
+}
+
+async function listVersions(id) {
+  const keys = (await versionKeys(id)).reverse();
+  const store = blobs();
+  const items = await Promise.all(keys.map((key) => store.get(key, { type: 'json' }).then((v) => [key, v])));
+  return items
+    .filter(([, v]) => v)
+    .map(([key, v]) => ({ key, at: v.at, by: v.by, note: v.note || '', chars: v.text.length }));
+}
+
+function cleanVersionKey(id, raw) {
+  const key = String(raw || '');
+  if (!VERSION_KEY.test(key) || !key.startsWith(`${VERSION_PREFIX}${id}/`)) throw new Refusal('Unknown version.', 410);
+  return key;
+}
+
+async function readVersion(key) {
+  const v = await blobs().get(key, { type: 'json' });
+  if (!v) throw new Refusal('That version no longer exists.', 410);
+  return v;
+}
+
+/* A deleted draft's record, if the user was one of its members. */
+async function deletedFor(id, email) {
+  const rec = await blobs().get(DELETED_PREFIX + id, { type: 'json' });
+  if (!rec || !rec.members.includes(email)) throw new Refusal('This draft has not been shared with you.');
+  return rec;
+}
+
+/* Access to a draft's versions: a member of the live draft, or of the
+ * deleted one. Returns { room?, deleted? }. */
+async function versionAccess(id, email) {
+  try {
+    const room = await liveblocks().getRoom(id);
+    requireMember(room, email);
+    return { room };
+  } catch (e) {
+    if (e instanceof Refusal) throw e;
+    if (e?.status !== 404) throw e;
+    return { deleted: await deletedFor(id, email) };
+  }
+}
+
 function newRoomId() {
   const bytes = crypto.getRandomValues(new Uint8Array(18));
   return ROOM_PREFIX + Buffer.from(bytes).toString('base64url');
@@ -322,6 +454,16 @@ export default async function handler(req) {
       const user = await requireUser(req);
       if (route === 'me') return json({ user });
       if (route === 'list') return json({ drafts: await listDrafts(user.email) });
+      if (route === 'deleted') {
+        const { blobs: items } = await blobs().list({ prefix: `${DELETED_INDEX}${user.email}/` });
+        const recs = await Promise.all(items.map((b) => blobs().get(DELETED_PREFIX + b.key.split('/').pop(), { type: 'json' })));
+        return json({
+          drafts: recs
+            .filter(Boolean)
+            .map(({ id, title, owner, deletedAt, deletedBy }) => ({ id, title, owner, deletedAt, deletedBy }))
+            .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt)),
+        });
+      }
       return fail('unknown route', 404);
     }
     if (req.method !== 'POST') return fail('method not allowed', 405);
@@ -381,7 +523,59 @@ export default async function handler(req) {
       });
     }
 
+    if (route === 'snapshot') {
+      const id = cleanRoomId(body.id);
+      const room = await readDraft(id);
+      const user = await optionalUser(req);
+      let by;
+      if (user && room.usersAccesses?.[user.email]) by = user.name;
+      else if (body.linkToken && body.linkToken === room.metadata?.linkToken && linkMode(room) === 'edit') {
+        by = user ? user.name : cleanGuestName(body.guestName);
+      } else throw new Refusal('This draft has not been shared with you.');
+      return json(await snapshot(id, by, { force: Boolean(body.force) }));
+    }
+
     const user = await requireUser(req);
+
+    if (route === 'versions') {
+      const id = cleanRoomId(body.id);
+      const access = await versionAccess(id, user.email);
+      return json({ versions: await listVersions(id), deleted: Boolean(access.deleted) });
+    }
+
+    if (route === 'version') {
+      const id = cleanRoomId(body.id);
+      await versionAccess(id, user.email);
+      const v = await readVersion(cleanVersionKey(id, body.key));
+      return json({ version: { at: v.at, by: v.by, text: v.text } });
+    }
+
+    if (route === 'restore-deleted' || route === 'purge-deleted') {
+      const id = cleanRoomId(body.id);
+      const rec = await deletedFor(id, user.email);
+      if (rec.owner !== user.email) throw new Refusal('Only the owner can do this.');
+      const store = blobs();
+      if (route === 'restore-deleted') {
+        const keys = await versionKeys(id);
+        const latest = keys.length ? await readVersion(keys[keys.length - 1]) : { text: '' };
+        const room = await liveblocks().createRoom(id, {
+          defaultAccesses: [],
+          usersAccesses: Object.fromEntries(rec.members.map((m) => [m, WRITE])),
+          metadata: { title: rec.title, owner: rec.owner },
+        });
+        if (latest.text) await setRoomText(id, latest.text);
+        await Promise.all([store.delete(DELETED_PREFIX + id), ...rec.members.map((m) => store.delete(`${DELETED_INDEX}${m}/${id}`))]);
+        return json({ draft: summary(room) });
+      }
+      const keys = await versionKeys(id);
+      await Promise.all([
+        ...keys.map((k) => store.delete(k)),
+        store.delete(VERSION_LAST + id),
+        store.delete(DELETED_PREFIX + id),
+        ...rec.members.map((m) => store.delete(`${DELETED_INDEX}${m}/${id}`)),
+      ]);
+      return json({ ok: true });
+    }
 
     if (route === 'create') {
       const id = newRoomId();
@@ -422,7 +616,28 @@ export default async function handler(req) {
 
     if (route === 'delete') {
       if (user.email !== owner) throw new Refusal('Only the owner can delete this draft.');
+      // Keep a last version and a record, so the draft can be restored.
+      await snapshot(id, user.name, { force: true, note: 'Before deleting' });
+      const members = Object.keys(room.usersAccesses);
+      const store = blobs();
+      await store.setJSON(DELETED_PREFIX + id, {
+        id,
+        title: room.metadata?.title || 'Untitled draft',
+        owner,
+        members,
+        deletedAt: new Date().toISOString(),
+        deletedBy: user.name,
+      });
+      await Promise.all(members.map((m) => store.set(`${DELETED_INDEX}${m}/${id}`, '1')));
       await liveblocks().deleteRoom(id);
+      return json({ ok: true });
+    }
+
+    if (route === 'restore-version') {
+      const v = await readVersion(cleanVersionKey(id, body.key));
+      await snapshot(id, user.name, { force: true, note: 'Before restoring an older version' });
+      await setRoomText(id, v.text);
+      await snapshot(id, user.name, { force: true, note: `Restored the version from ${v.at}` });
       return json({ ok: true });
     }
 

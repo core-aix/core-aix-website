@@ -9,6 +9,7 @@
   "dependencies": {
     "@liveblocks/node": "^3.25.0",
     "@netlify/blobs": "^8.1.0",
-    "jose": "^6.2.17"
+    "jose": "^6.2.17",
+    "yjs": "^13.6.33"
   }
 }

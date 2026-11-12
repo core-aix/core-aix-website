@@ -13,6 +13,8 @@ import {
   placeholder,
   basicSetup,
   indentWithTab,
+  createSpellChecker,
+  SPELL_LANGUAGES,
 } from './vendor/collab.js'
 
 /*
@@ -41,7 +43,7 @@ $$
 \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
 $$
 
-- Write math as in a paper under *Plain LaTeX*.
+- Write maths as in a paper under *Plain LaTeX*.
 - *OpenReview text* shows what to paste, with only the backslashes OpenReview needs.
 - Sign in with Google to save drafts and write them together.
 `
@@ -89,8 +91,28 @@ function toast(msg, kind = '') {
 }
 
 // A modal on <dialog>. Resolves { button, values }; button is null if dismissed.
+//
+// A dialog's "close" event fires a moment after .close(), so it can arrive
+// after the next dialog has opened. Only a close the user caused (Escape)
+// may cancel the dialog that is open: closes made here are flagged and skipped.
+let dialogCancel = null // resolves the open dialog as dismissed
+let ignoreClose = 0
+$('dialog').addEventListener('close', () => {
+  if (ignoreClose > 0) return void ignoreClose--
+  const cancel = dialogCancel
+  dialogCancel = null
+  cancel?.()
+})
+function closeDialog() {
+  const dlg = $('dialog')
+  if (!dlg.open) return
+  ignoreClose++
+  dlg.close()
+}
+
 function ask({ title, html = '', fields = [], buttons, onOpen }) {
   const dlg = $('dialog')
+  closeDialog() // a dialog replaced by another counts as answered elsewhere
   $('dialog-title').textContent = title
   const body = $('dialog-body')
   body.innerHTML = html
@@ -115,11 +137,14 @@ function ask({ title, html = '', fields = [], buttons, onOpen }) {
   const bar = $('dialog-buttons')
   bar.innerHTML = ''
   return new Promise((resolve) => {
+    let settled = false
     const finish = (button) => {
+      if (settled) return
+      settled = true
       const values = {}
-      for (const f of fields) values[f.id] = $(`f-${f.id}`).value.trim()
-      dlg.onclose = null
-      dlg.close()
+      for (const f of fields) values[f.id] = $(`f-${f.id}`)?.value.trim() ?? ''
+      dialogCancel = null
+      closeDialog()
       resolve({ button, values })
     }
     for (const b of buttons) {
@@ -137,7 +162,10 @@ function ask({ title, html = '', fields = [], buttons, onOpen }) {
         finish(buttons[0].value)
       }
     }
-    dlg.onclose = () => resolve({ button: null, values: {} })
+    dialogCancel = () => {
+      settled = true
+      resolve({ button: null, values: {} })
+    }
     dlg.showModal()
     onOpen?.(body, finish)
     body.querySelector('input')?.focus()
@@ -189,6 +217,73 @@ async function api(route, body) {
 const prefs = Object.assign({ zoom: 1, tab: 'latex' }, LS.get('ord:prefs'))
 const savePrefs = () => LS.set('ord:prefs', prefs)
 
+// ---------------------------------------------------------------- spell check
+function defaultSpellLanguage() {
+  for (const l of navigator.languages || [navigator.language]) {
+    if (SPELL_LANGUAGES[l]) return l
+    const base = String(l).split('-')[0]
+    if (SPELL_LANGUAGES[base]) return base
+    if (base === 'en') return 'en-GB'
+  }
+  return 'en-GB'
+}
+
+const spell = createSpellChecker({
+  workerUrl: new URL('./vendor/spell-worker.js', import.meta.url),
+  personal: LS.get('ord:dict') || [],
+  onStatus: (state, message) => {
+    const el = $('spell-status')
+    el.textContent = state === 'loading' ? 'Loading dictionary…' : state === 'error' ? 'Dictionary failed' : ''
+    el.title = message || ''
+    if (state === 'error') toast(message, 'error')
+  },
+  onMenu: showSpellMenu,
+})
+
+function closeSpellMenu() {
+  document.getElementById('spell-menu')?.remove()
+}
+
+async function showSpellMenu({ view, from, to, word, x, y }) {
+  closeSpellMenu()
+  const menu = document.createElement('div')
+  menu.id = 'spell-menu'
+  menu.className = 'spell-menu'
+  menu.setAttribute('role', 'menu')
+  menu.innerHTML = '<div class="muted">Looking for suggestions…</div>'
+  menu.style.left = `${Math.min(x, innerWidth - 230)}px`
+  menu.style.top = `${Math.min(y, innerHeight - 260)}px`
+  document.body.append(menu)
+  const item = (label, fn, cls = '') => {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = cls
+    b.textContent = label
+    b.addEventListener('click', () => {
+      closeSpellMenu()
+      fn()
+      view.focus()
+    })
+    menu.append(b)
+  }
+  const list = await spell.suggest(word)
+  if (!menu.isConnected) return
+  menu.innerHTML = ''
+  const editable = !view.state.readOnly
+  if (editable) {
+    for (const s of list) item(s, () => view.dispatch({ changes: { from, to, insert: s } }), 'suggestion')
+    if (!list.length) menu.insertAdjacentHTML('beforeend', '<div class="muted">No suggestions</div>')
+    menu.insertAdjacentHTML('beforeend', '<hr>')
+  }
+  item(`Add “${word}” to dictionary`, () => LS.set('ord:dict', spell.addWord(word)))
+  item('Ignore', () => spell.ignoreWord(word))
+}
+document.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest?.('#spell-menu')) closeSpellMenu()
+})
+document.addEventListener('keydown', (e) => e.key === 'Escape' && closeSpellMenu())
+document.addEventListener('scroll', closeSpellMenu, true)
+
 const baseTheme = EditorView.theme({
   '&': { height: '100%', fontSize: '0.875rem', backgroundColor: '#fff' },
   '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', lineHeight: '1.5' },
@@ -214,6 +309,7 @@ function makeOrEditor() {
         keymap.of([indentWithTab]),
         EditorView.lineWrapping,
         baseTheme,
+        spell.extension,
         orReadOnly.of([]),
         EditorView.updateListener.of((u) => {
           if (u.selectionSet || u.docChanged) scheduleCounts()
@@ -303,6 +399,7 @@ function closeDraft() {
   applyOrEditsNow()
   if (draft.creating) handOverText = draft.ytext.toString()
   for (const u of draft.unsubs) u()
+  spell.forget(draft.latexView)
   draft.latexView.destroy()
   if (draft.leave) draft.leave()
   else draft.doc.destroy()
@@ -329,8 +426,9 @@ function mountLatexEditor(d) {
         basicSetup,
         EditorView.lineWrapping,
         baseTheme,
-        placeholder('Write your reply here. Math as in LaTeX: $x_i$, $$\\sum_i x_i$$ …'),
+        placeholder('Write your reply here. Maths as in LaTeX: $x_i$, $$\\sum_i x_i$$ …'),
         yCollab(d.ytext, d.awareness, { undoManager }),
+        spell.extension,
         readOnlyExt(d.readOnly),
         EditorView.updateListener.of((u) => {
           if (u.selectionSet) scheduleCounts()
@@ -375,7 +473,10 @@ function startAutoCreate() {
 }
 
 function attachDerived(d) {
-  const handler = () => scheduleDerive()
+  const handler = (_event, tr) => {
+    scheduleDerive()
+    if (tr?.local) noteLocalEdit()
+  }
   d.ytext.observe(handler)
   d.unsubs.push(() => d.ytext.unobserve(handler))
 }
@@ -560,6 +661,212 @@ function updateSyncStatus() {
   }
 }
 
+// ---------------------------------------------------------------- versions
+/*
+ * The server keeps versions (see /api/drafts/snapshot). The page asks for one
+ * a minute after someone here stops typing, at least every five minutes while
+ * they keep typing, and when the page is hidden or goes idle. The server reads
+ * the text from Liveblocks itself and skips it if nothing changed.
+ */
+let snapTimer = null
+let snapDirtySince = 0
+
+function noteLocalEdit() {
+  if (!draft?.id || draft.readOnly) return
+  const now = Date.now()
+  if (!snapDirtySince) snapDirtySince = now
+  clearTimeout(snapTimer)
+  snapTimer = setTimeout(() => snapshotNow(), Math.max(1000, Math.min(60_000, snapDirtySince + 5 * 60_000 - now)))
+}
+
+// Resolves once Liveblocks has everything typed here (or after 10 s).
+function waitSynced() {
+  return new Promise((resolve) => {
+    const start = Date.now()
+    const tick = () =>
+      !client || client.getSyncStatus() !== 'synchronizing' || Date.now() - start > 10_000
+        ? resolve()
+        : setTimeout(tick, 300)
+    tick()
+  })
+}
+
+async function snapshotNow({ force = false, keepalive = false } = {}) {
+  clearTimeout(snapTimer)
+  snapTimer = null
+  const d = draft
+  if (!d?.id || d.readOnly || (!snapDirtySince && !force)) return
+  if (!keepalive) await waitSynced()
+  snapDirtySince = 0
+  const body = { id: d.id, force, ...(d.guest ? { linkToken: linkTokens.get(d.id), guestName: guestName() } : {}) }
+  try {
+    const res = await fetch(`${API}/snapshot`, {
+      method: 'POST',
+      keepalive,
+      headers: { ...(session ? { Authorization: `Bearer ${session.token}` } : {}), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const r = await res.json().catch(() => ({}))
+    // Too soon after the last version: try again when allowed.
+    if (r.reason === 'recent' && draft === d && !keepalive) {
+      snapDirtySince = snapDirtySince || Date.now()
+      snapTimer = setTimeout(() => snapshotNow(), (r.retryIn || 60_000) + 1000)
+    }
+  } catch {}
+}
+
+const flushSnapshot = () => snapDirtySince && snapshotNow({ keepalive: true })
+window.addEventListener('pagehide', flushSnapshot)
+document.addEventListener('visibilitychange', () => document.hidden && flushSnapshot())
+
+const fmtTime = (iso) =>
+  new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+function downloadText(text, name) {
+  const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = name
+  document.body.append(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+}
+
+// The versions of a draft (live or deleted): view, download, restore.
+async function historyDialog(id, title, { deleted = false } = {}) {
+  if (!deleted && draft?.id === id) await snapshotNow({ force: true })
+  let versions
+  try {
+    versions = (await api('versions', { id })).versions
+  } catch (e) {
+    return toast(e.message, 'error')
+  }
+  const canRestore = !deleted && draft?.id === id && !draft.readOnly
+  const rows = versions.length
+    ? versions
+        .map(
+          (v, i) => `<div class="version" data-key="${esc(v.key)}">
+            <div class="who"><b>${esc(fmtTime(v.at))}</b>${i === 0 ? ' <span class="tag">latest</span>' : ''}<br>
+              <small>${esc(v.by || '')} · ${v.chars.toLocaleString()} characters${v.note ? ` · ${esc(v.note)}` : ''}</small></div>
+            <button type="button" class="link" data-act="view">View</button>
+            <button type="button" class="link" data-act="download">Download</button>
+            ${canRestore && i > 0 ? '<button type="button" class="link" data-act="restore">Restore</button>' : ''}
+          </div>`
+        )
+        .join('')
+    : '<p class="muted">No versions saved yet. One is saved a minute after someone stops typing.</p>'
+  await ask({
+    title: `Versions of “${title}”`,
+    html: `<p class="muted">Saved automatically while people edit, and kept when a draft is deleted.</p>
+      <div class="versions">${rows}</div>`,
+    buttons: [{ label: 'Close', value: null, kind: 'primary' }],
+    onOpen: (body, finish) => {
+      body.querySelectorAll('.version button').forEach((btn) =>
+        btn.addEventListener('click', async () => {
+          const key = btn.closest('.version').dataset.key
+          const v = versions.find((x) => x.key === key)
+          try {
+            if (btn.dataset.act === 'restore') {
+              finish(null)
+              const r = await ask({
+                title: 'Restore this version?',
+                html: `<p>The draft will go back to the version from <b>${esc(fmtTime(v.at))}</b> for everyone editing it.</p>
+                  <p class="muted">The current text is saved as a version first, so this can be undone.</p>`,
+                buttons: [
+                  { label: 'Restore', value: 'ok', kind: 'primary' },
+                  { label: 'Cancel', value: null },
+                ],
+              })
+              if (r.button !== 'ok') return
+              await waitSynced()
+              await api('restore-version', { id, key })
+              return toast('Version restored.')
+            }
+            const { version } = await api('version', { id, key })
+            const name = `${fileName(title).replace(/\.md$/, '')} ${v.at.slice(0, 16).replace('T', ' ').replace(':', '-')}.md`
+            if (btn.dataset.act === 'download') return downloadText(version.text, name)
+            finish(null)
+            const r = await ask({
+              title: `Version from ${fmtTime(v.at)}`,
+              html: `<pre class="version-text"></pre>`,
+              buttons: [
+                { label: 'Download', value: 'download', kind: 'primary' },
+                { label: 'Back', value: 'back' },
+              ],
+              onOpen: (b) => (b.querySelector('.version-text').textContent = version.text || '(empty)'),
+            })
+            if (r.button === 'download') downloadText(version.text, name)
+            if (r.button) historyDialog(id, title, { deleted })
+          } catch (e) {
+            toast(e.message, 'error')
+          }
+        })
+      )
+    },
+  })
+}
+
+// Drafts deleted by their owner: versions, restore, delete for good.
+async function deletedDialog() {
+  let list
+  try {
+    list = (await api('deleted')).drafts
+  } catch (e) {
+    return toast(e.message, 'error')
+  }
+  const me = session.user.email
+  const rows = list.length
+    ? list
+        .map(
+          (x) => `<div class="version" data-id="${esc(x.id)}">
+            <div class="who"><b>${esc(x.title)}</b><br>
+              <small>Deleted ${esc(fmtTime(x.deletedAt))} by ${esc(x.deletedBy || '?')}${x.owner === me ? '' : ` · owner ${esc(x.owner)}`}</small></div>
+            <button type="button" class="link" data-act="versions">Versions</button>
+            ${x.owner === me ? '<button type="button" class="link" data-act="restore">Restore</button><button type="button" class="link danger" data-act="purge">Delete for good</button>' : ''}
+          </div>`
+        )
+        .join('')
+    : '<p class="muted">No deleted drafts.</p>'
+  await ask({
+    title: 'Deleted drafts',
+    html: `<p class="muted">Drafts you were part of. Their versions can be viewed and downloaded; the owner can restore them.</p>
+      <div class="versions">${rows}</div>`,
+    buttons: [{ label: 'Close', value: null, kind: 'primary' }],
+    onOpen: (body, finish) => {
+      body.querySelectorAll('.version button').forEach((btn) =>
+        btn.addEventListener('click', async () => {
+          const id = btn.closest('.version').dataset.id
+          const x = list.find((d) => d.id === id)
+          finish(null)
+          try {
+            if (btn.dataset.act === 'versions') return historyDialog(id, x.title, { deleted: true })
+            if (btn.dataset.act === 'restore') {
+              const { draft: meta } = await api('restore-deleted', { id })
+              await refreshDrafts()
+              await openDraft(meta.id)
+              return toast(`Restored “${meta.title}”.`)
+            }
+            const r = await ask({
+              title: 'Delete for good?',
+              html: `<p><b>${esc(x.title)}</b> and all its versions will be removed for everyone. This cannot be undone.</p>`,
+              buttons: [
+                { label: 'Delete for good', value: 'ok', kind: 'danger-solid' },
+                { label: 'Cancel', value: null },
+              ],
+            })
+            if (r.button !== 'ok') return deletedDialog()
+            await api('purge-deleted', { id })
+            toast('Deleted for good.')
+          } catch (e) {
+            toast(e.message, 'error')
+          }
+        })
+      )
+    },
+  })
+}
+
 // ---------------------------------------------------------------- idle
 /*
  * Liveblocks bills by connection time. A visible page with no key press,
@@ -588,6 +895,7 @@ setInterval(() => {
   if (!draft?.room || idlePaused || document.hidden) return
   if (Date.now() - lastActivity < IDLE_MS) return
   if (client?.getSyncStatus() === 'synchronizing') return // never drop unsaved edits
+  if (snapDirtySince) return void snapshotNow() // save a version before letting go
   idlePaused = true
   draft.room.disconnect()
   renderPresence()
@@ -605,11 +913,16 @@ function renderToolbar() {
       const shared = x.owner && x.owner !== session.user.email ? ` · shared by ${x.owner}` : ''
       sel.add(new Option(`${x.title}${shared}`, x.id, false, draft?.id === x.id))
     }
+    const sep = new Option('──────────', '')
+    sep.disabled = true
+    sel.add(sep)
+    sel.add(new Option('Deleted drafts…', '__deleted'))
   }
   const t = $('draft-title')
   t.textContent = draft ? draft.title : ''
   t.disabled = !draft?.id || draft.guest
   $('share').hidden = !draft?.id || draft.guest
+  $('history').hidden = !draft?.id || draft.guest
   $('delete-draft').hidden = !(draft?.id && !draft.guest && draft.owner === session?.user.email)
   updateSyncStatus()
   updateScratchBanner()
@@ -732,7 +1045,7 @@ function showTab(tab) {
   $('latex-editor').hidden = tab !== 'latex'
   $('or-editor').hidden = tab !== 'or'
   $('tab-hint').textContent =
-    tab === 'latex' ? 'Write math normally' : 'Exactly what you paste. Edits update the LaTeX.'
+    tab === 'latex' ? 'Write maths normally' : 'Exactly what you paste. Edits update the LaTeX.'
   ;(tab === 'latex' ? draft?.latexView : orView)?.requestMeasure()
   scheduleCounts()
 }
@@ -814,8 +1127,14 @@ async function createDraft(title, initialText) {
 }
 
 $('draft-select').addEventListener('change', (e) => {
-  if (e.target.value) openDraft(e.target.value)
+  const v = e.target.value
+  if (v === '__deleted') {
+    e.target.value = draft?.id || ''
+    return deletedDialog()
+  }
+  if (v) openDraft(v)
 })
+$('history').addEventListener('click', () => historyDialog(draft.id, draft.title))
 
 $('new-draft').addEventListener('click', async () => {
   if (!session) {
@@ -875,8 +1194,9 @@ $('draft-title').addEventListener('click', async () => {
 $('delete-draft').addEventListener('click', async () => {
   const r = await ask({
     title: 'Delete this draft?',
-    html: `<p><b>${esc(draft.title)}</b> will be deleted for everyone it is shared with. This cannot be undone.</p>
-      <p class="muted">Download it first if you want a copy.</p>`,
+    html: `<p><b>${esc(draft.title)}</b> will be deleted for everyone it is shared with.</p>
+      <p class="muted">Its versions are kept: you can restore it later from <b>Deleted drafts…</b> in the drafts list,
+      and anyone it was shared with can still download them.</p>`,
     buttons: [
       { label: 'Delete for everyone', value: 'delete', kind: 'danger-solid' },
       { label: 'Cancel', value: null },
@@ -885,12 +1205,13 @@ $('delete-draft').addEventListener('click', async () => {
   if (r.button !== 'delete') return
   try {
     const id = draft.id
+    await waitSynced() // the server saves the text as Liveblocks has it
     await api('delete', { id })
     closeDraft()
     drafts = drafts.filter((x) => x.id !== id)
     LS.del('ord:last')
     history.replaceState(null, '', location.pathname)
-    toast('Draft deleted.')
+    toast('Draft deleted. Restore it from “Deleted drafts…” in the list.')
     await openFirstOrNew()
   } catch (e) {
     toast(e.message, 'error')
@@ -1198,6 +1519,16 @@ window.addEventListener('beforeunload', (e) => {
 
 async function start() {
   setZoom(Number(prefs.zoom) || 1)
+  const langSel = $('spell-lang')
+  langSel.add(new Option('Spelling: off', 'off'))
+  for (const [code, { label }] of Object.entries(SPELL_LANGUAGES)) langSel.add(new Option(label, code))
+  langSel.value = prefs.spell || defaultSpellLanguage()
+  langSel.addEventListener('change', () => {
+    prefs.spell = langSel.value
+    savePrefs()
+    spell.setLanguage(langSel.value === 'off' ? null : langSel.value)
+  })
+  spell.setLanguage(langSel.value === 'off' ? null : langSel.value)
   makeOrEditor()
   showTab(prefs.tab === 'or' ? 'or' : 'latex')
   if (session) {
