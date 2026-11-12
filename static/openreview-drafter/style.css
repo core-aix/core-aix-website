@@ -1,6 +1,13 @@
 /* App chrome */
 :root {
-  --or-red: #8c1b13;
+  --or-red: #8c1b13;   /* OpenReview's red: used only inside the preview */
+  /* The page's own colours, from the CORE-AIx site (assets/css/main.css),
+     so the drafter doesn't pass for an OpenReview page. */
+  --brand: #111b27;    /* site panel navy */
+  --brand-ink: #e8f1fb;
+  --accent: #39c7a5;   /* site accent teal */
+  --action: #157a64;   /* darker teal: white text on it stays readable */
+  --action-hover: #10614f;
   --dark-blue: #2c3a4a;
   --border: #d9d9d9;
   --bg: #fffff9;
@@ -36,12 +43,13 @@ button:disabled { cursor: progress; opacity: 0.6; }
   align-items: center;
   gap: 0.5rem 1rem;
   padding: 0.45rem 1rem;
-  background: var(--or-red);
-  color: #fff;
+  background: var(--brand);
+  color: var(--brand-ink);
+  border-bottom: 2px solid var(--accent);
 }
 .brand { display: flex; align-items: center; gap: 0.4rem; color: #fff; text-decoration: none; font-weight: bold; opacity: 0.9; }
 .brand:hover { opacity: 1; }
-.brand img { width: 22px; height: 22px; border-radius: 4px; background: #fff; }
+.brand img { width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px #253648; }
 .bar h1 { font-size: 1.125rem; margin: 0; font-weight: bold; padding-left: 1rem; border-left: 1px solid rgba(255,255,255,0.35); }
 .account { margin-left: auto; display: flex; align-items: center; min-height: 32px; }
 .user-menu { display: flex; align-items: center; gap: 0.5rem; }
@@ -53,7 +61,7 @@ button:disabled { cursor: progress; opacity: 0.6; }
 .count { color: #666; font-variant-numeric: tabular-nums; font-size: 0.8125rem; }
 .primary {
   background: #fff;
-  color: var(--or-red);
+  color: var(--action);
   border: 0;
   border-radius: 3px;
   padding: 0.35rem 0.8rem;
@@ -80,8 +88,8 @@ button:disabled { cursor: progress; opacity: 0.6; }
 }
 .toolbar button:hover { background: #f0f0ea; }
 .toolbar .right { margin-left: auto; }
-.toolbar button.primary { background: var(--or-red); border-color: var(--or-red); color: #fff; font-weight: bold; min-width: 11rem; }
-.toolbar button.primary:hover { background: #a3241b; }
+.toolbar button.primary { background: var(--action); border-color: var(--action); color: #fff; font-weight: bold; min-width: 11rem; }
+.toolbar button.primary:hover { background: var(--action-hover); }
 .toolbar button.danger { color: #b3261e; border-color: #e3a29d; }
 .toolbar button:disabled { cursor: default; opacity: 1; }
 #draft-select { max-width: 20rem; min-width: 10rem; }
@@ -112,9 +120,25 @@ main {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* --split: the editor's share of the width (or of the height when stacked) */
+  grid-template-columns: minmax(0, var(--split, 50%)) 7px minmax(0, 1fr);
 }
-.pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; border-right: 1px solid var(--border); }
+.pane { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.splitter {
+  background: var(--chrome);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  cursor: col-resize;
+  touch-action: none;
+  position: relative;
+}
+.splitter::after { /* grip */
+  content: ''; position: absolute; top: 50%; left: 50%; width: 3px; height: 28px; transform: translate(-50%, -50%);
+  border-left: 1px dotted #aaa; border-right: 1px dotted #aaa;
+}
+.splitter:hover, .splitter:focus-visible, .splitter.dragging { background: #e6e6de; outline: none; }
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing.stacked { cursor: row-resize; }
 .pane:last-child { border-right: 0; }
 .pane-head {
   background: var(--chrome);
@@ -135,7 +159,7 @@ main {
   color: var(--dark-blue);
   font-weight: bold;
 }
-.tab.active { border-bottom-color: var(--or-red); color: var(--or-red); }
+.tab.active { border-bottom-color: var(--action); color: var(--action); }
 .tab-hint { margin-left: auto; align-self: center; font-weight: normal; font-size: 0.75rem; padding-right: 0.5rem; color: #777; }
 
 .scroll { flex: 1; overflow: auto; padding: 1rem; margin: 0; }
@@ -172,7 +196,7 @@ dialog code { font-family: var(--mono); font-size: 0.8125rem; background: #f3f3e
 .field small { color: #666; }
 .dialog-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
 .dialog-buttons button { border: 1px solid #bbb; background: #fff; border-radius: 4px; padding: 0.35rem 0.9rem; }
-.dialog-buttons button.primary { background: var(--or-red); color: #fff; border-color: var(--or-red); min-width: 0; }
+.dialog-buttons button.primary { background: var(--action); color: #fff; border-color: var(--action); min-width: 0; }
 .dialog-buttons button.danger { color: #b3261e; border-color: #e3a29d; }
 .dialog-buttons button.danger-solid { background: #b3261e; color: #fff; border-color: #b3261e; }
 dialog h3 { font-size: 0.875rem; margin: 1rem 0 0.4rem; color: var(--dark-blue); }
@@ -180,7 +204,7 @@ dialog h3 { font-size: 0.875rem; margin: 1rem 0 0.4rem; color: var(--dark-blue);
 .share-add input, .share-link input { flex: 1; padding: 0.35rem 0.5rem; border: 1px solid #bbb; border-radius: 4px; min-width: 0; }
 .share-link input { background: #f6f6f2; color: #555; font-size: 0.8125rem; }
 .share-add button, .share-link button { border: 1px solid #bbb; background: #fff; border-radius: 4px; padding: 0.3rem 0.8rem; }
-.share-add button.primary { background: var(--or-red); color: #fff; border-color: var(--or-red); min-width: 0; }
+.share-add button.primary { background: var(--action); color: #fff; border-color: var(--action); min-width: 0; }
 .members { max-height: 14rem; overflow: auto; }
 .member { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; border-top: 1px solid #f0f0ea; }
 .member .who { flex: 1; line-height: 1.3; }
@@ -205,8 +229,9 @@ dialog h3 { font-size: 0.875rem; margin: 1rem 0 0.4rem; color: var(--dark-blue);
 .toast.error { background: #b3261e; }
 
 @media (max-width: 760px) {
-  main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-  .pane { border-right: 0; border-bottom: 1px solid var(--border); }
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, var(--split, 50%)) 7px minmax(0, 1fr); }
+  .splitter { cursor: row-resize; border: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .splitter::after { width: 28px; height: 3px; border: 0; border-top: 1px dotted #aaa; border-bottom: 1px dotted #aaa; }
   .toolbar .right { margin-left: 0; }
   .bar h1 { border-left: 0; padding-left: 0; }
 }
@@ -325,3 +350,13 @@ dialog h3.first { margin-top: 0; }
 .version .link.danger { color: #b3261e; }
 .version-text { max-height: 50vh; overflow: auto; background: #f6f6f2; border: 1px solid #e3e3dc; border-radius: 4px; padding: 0.6rem; white-space: pre-wrap; font: 0.8125rem/1.45 var(--mono); margin: 0; }
 dialog { width: min(40rem, calc(100vw - 2rem)); }
+
+/* The editor's header as the splitter makes the pane narrower: drop the
+   hint, then shorten the tab names, then wrap. */
+.pane:first-of-type { container-type: inline-size; }
+.tabs { flex-wrap: wrap; }
+.tabs .tab { white-space: nowrap; }
+.tab-hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spell-lang { flex: none; }
+@container (max-width: 600px) { .tab-hint { display: none; } .spell-status { margin-left: auto; } }
+@container (max-width: 400px) { .tab-long { display: none; } }

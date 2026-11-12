@@ -83,9 +83,9 @@
     <section class="pane">
       <div class="pane-head tabs" role="tablist">
         <button role="tab" class="tab active" data-tab="latex"
-          title="Ordinary Markdown, with maths written as in a LaTeX paper. Everyone editing this draft sees changes live.">Standard Markdown</button>
+          title="Ordinary Markdown, with maths written as in a LaTeX paper. Everyone editing this draft sees changes live.">Standard<span class="tab-long"> Markdown</span></button>
         <button role="tab" class="tab" data-tab="or"
-          title="The same text with the extra backslashes OpenReview needs: exactly what you paste. Edits here update the standard Markdown.">OpenReview Markdown</button>
+          title="The same text with the extra backslashes OpenReview needs: exactly what you paste. Edits here update the standard Markdown.">OpenReview<span class="tab-long"> Markdown</span></button>
         <span id="tab-hint" class="tab-hint"></span>
         <span id="spell-status" class="spell-status"></span>
         <label for="spell-lang" class="sr-only">Spell-check language</label>
@@ -94,6 +94,9 @@
       <div id="latex-editor" class="cm-host"></div>
       <div id="or-editor" class="cm-host" hidden></div>
     </section>
+
+    <div id="splitter" class="splitter" role="separator" aria-orientation="vertical" aria-label="Resize the editor and the preview"
+      tabindex="0" title="Drag to resize. Double-click to reset."></div>
 
     <section class="pane">
       <div class="pane-head">

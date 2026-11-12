@@ -43,7 +43,7 @@ $$
 \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
 $$
 
-- Write in *Standard Markdown*, with maths as in a LaTeX paper.
+- Write in *Standard Markdown*, with equations as in a LaTeX paper.
 - *OpenReview Markdown* is what to paste: the same text with the backslashes OpenReview needs.
 - Sign in with Google to save drafts and write them together.
 `
@@ -1442,6 +1442,73 @@ function renderAccount() {
   renderToolbar()
 }
 
+// ---------------------------------------------------------------- splitter
+/*
+ * The bar between the editor and the preview. Drag it, or focus it and use
+ * the arrow keys (Shift for bigger steps); double-click resets it. Side by
+ * side it sets the editor's width; stacked (narrow screens) its height.
+ */
+const mainEl = document.querySelector('main')
+const splitter = $('splitter')
+const stackedQuery = matchMedia('(max-width: 760px)')
+const SPLIT_MIN = 15
+const SPLIT_MAX = 85
+
+function setSplit(pct, save = true) {
+  const v = Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, pct))
+  prefs.split = Math.round(v * 10) / 10
+  mainEl.style.setProperty('--split', `${prefs.split}%`)
+  splitter.setAttribute('aria-valuenow', String(Math.round(prefs.split)))
+  if (save) savePrefs()
+}
+function syncOrientation() {
+  const stacked = stackedQuery.matches
+  document.body.classList.toggle('stacked', stacked)
+  splitter.setAttribute('aria-orientation', stacked ? 'horizontal' : 'vertical')
+}
+splitter.setAttribute('aria-valuemin', String(SPLIT_MIN))
+splitter.setAttribute('aria-valuemax', String(SPLIT_MAX))
+stackedQuery.addEventListener('change', syncOrientation)
+syncOrientation()
+
+splitter.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return
+  e.preventDefault()
+  splitter.setPointerCapture(e.pointerId)
+  splitter.classList.add('dragging')
+  document.body.classList.add('resizing')
+  const rect = mainEl.getBoundingClientRect()
+  const move = (ev) => {
+    const pct = stackedQuery.matches
+      ? ((ev.clientY - rect.top) / rect.height) * 100
+      : ((ev.clientX - rect.left) / rect.width) * 100
+    setSplit(pct, false)
+  }
+  const up = () => {
+    splitter.removeEventListener('pointermove', move)
+    splitter.removeEventListener('pointerup', up)
+    splitter.removeEventListener('pointercancel', up)
+    splitter.classList.remove('dragging')
+    document.body.classList.remove('resizing')
+    savePrefs()
+  }
+  splitter.addEventListener('pointermove', move)
+  splitter.addEventListener('pointerup', up)
+  splitter.addEventListener('pointercancel', up)
+})
+splitter.addEventListener('dblclick', () => setSplit(50))
+splitter.addEventListener('keydown', (e) => {
+  const step = e.shiftKey ? 10 : 2
+  const back = stackedQuery.matches ? 'ArrowUp' : 'ArrowLeft'
+  const fwd = stackedQuery.matches ? 'ArrowDown' : 'ArrowRight'
+  if (e.key === back) setSplit(prefs.split - step)
+  else if (e.key === fwd) setSplit(prefs.split + step)
+  else if (e.key === 'Home') setSplit(SPLIT_MIN)
+  else if (e.key === 'End') setSplit(SPLIT_MAX)
+  else return
+  e.preventDefault()
+})
+
 // ---------------------------------------------------------------- start
 function hashDraftId() {
   const m = /(?:^|[#&])d=(ord-[A-Za-z0-9_-]+)/.exec(location.hash)
@@ -1512,6 +1579,7 @@ window.addEventListener('beforeunload', (e) => {
 
 async function start() {
   setZoom(Number(prefs.zoom) || 1)
+  setSplit(Number(prefs.split) || 50, false)
   const langSel = $('spell-lang')
   langSel.add(new Option('Spelling: off', 'off'))
   for (const [code, { label }] of Object.entries(SPELL_LANGUAGES)) langSel.add(new Option(label, code))
