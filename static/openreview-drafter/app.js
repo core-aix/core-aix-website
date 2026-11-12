@@ -12,6 +12,7 @@ import {
   keymap,
   placeholder,
   basicSetup,
+  search,
   indentWithTab,
   createSpellChecker,
   SPELL_LANGUAGES,
@@ -300,6 +301,7 @@ function makeOrEditor() {
       doc: '',
       extensions: [
         basicSetup,
+        searchAtTop,
         keymap.of([indentWithTab]),
         EditorView.lineWrapping,
         baseTheme,
@@ -337,6 +339,10 @@ function minimalChange(a, b) {
   while (s < max - p && a[a.length - 1 - s] === b[b.length - 1 - s]) s++
   return { from: p, to: a.length - s, insert: b.slice(p, b.length - s) }
 }
+
+// Find and replace opens at the top of the editor: at the bottom, Liveblocks'
+// badge covers it.
+const searchAtTop = search({ top: true })
 
 const readOnlyExt = (ro) => (ro ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : [])
 
@@ -424,6 +430,7 @@ function mountLatexEditor(d) {
       extensions: [
         keymap.of([...yUndoManagerKeymap, indentWithTab, { key: 'Mod-Alt-m', run: () => startComment() }]),
         basicSetup,
+        searchAtTop,
         EditorView.lineWrapping,
         baseTheme,
         placeholder('Write your reply here. Maths as in LaTeX: $x_i$, $$\\sum_i x_i$$ …'),
