@@ -296,9 +296,12 @@ function getClient() {
   return client
 }
 
+let handOverText = null // scratch text being turned into a saved draft
+
 function closeDraft() {
   if (!draft) return
   applyOrEditsNow()
+  if (draft.creating) handOverText = draft.ytext.toString()
   for (const u of draft.unsubs) u()
   draft.latexView.destroy()
   if (draft.leave) draft.leave()
@@ -315,6 +318,7 @@ function applyOrEditsNow() {
 }
 
 function mountLatexEditor(d) {
+  $('latex-editor').replaceChildren() // never two editors on top of each other
   const undoManager = new Y.UndoManager(d.ytext)
   d.latexView = new EditorView({
     parent: $('latex-editor'),
@@ -352,6 +356,22 @@ function derive() {
   updateCounts()
   renderPreview(or)
   updateScratchBanner()
+  if (draft.autoCreate && session && latex.trim()) startAutoCreate()
+}
+
+// Signed in, no drafts yet: the first thing typed becomes a saved draft.
+// Typing can go on while the draft is created; the text is taken over when
+// the scratch page is closed.
+function startAutoCreate() {
+  const d = draft
+  d.autoCreate = false
+  d.creating = true
+  const firstLine = d.ytext.toString().trim().split('\n')[0].replace(/[*#_`$\\]/g, '').trim()
+  createDraft(firstLine.slice(0, 60) || 'Untitled draft', () => handOverText ?? '').catch((e) => {
+    d.creating = false
+    d.autoCreate = true
+    toast(e.message, 'error')
+  })
 }
 
 function attachDerived(d) {
@@ -360,12 +380,21 @@ function attachDerived(d) {
   d.unsubs.push(() => d.ytext.unobserve(handler))
 }
 
-function openScratch(text = SAMPLE) {
+function openScratch(text = SAMPLE, { autoCreate = false } = {}) {
   closeDraft()
   const doc = new Y.Doc()
   const ytext = doc.getText('latex')
   ytext.insert(0, text)
-  const d = { id: null, title: 'Scratch draft (not saved)', doc, ytext, awareness: new Awareness(doc), unsubs: [], initial: text }
+  const d = {
+    id: null,
+    title: autoCreate ? 'New draft' : 'Scratch draft (not saved)',
+    doc,
+    ytext,
+    awareness: new Awareness(doc),
+    unsubs: [],
+    initial: text,
+    autoCreate,
+  }
   draft = d
   mountLatexEditor(d)
   attachDerived(d)
@@ -423,9 +452,13 @@ async function openDraft(id, { initialText, link } = {}) {
     if (!synced || draft !== d) return
     $('latex-editor').classList.remove('loading')
     // A draft started from a file: fill it once, after the (empty) room has loaded.
-    if (initialText && d.ytext.length === 0) {
-      d.ytext.insert(0, initialText)
-      initialText = null
+    const text = typeof initialText === 'function' ? initialText() : initialText
+    initialText = null
+    handOverText = null
+    if (text && d.ytext.length === 0) {
+      d.ytext.insert(0, text)
+      d.latexView.dispatch({ selection: { anchor: text.length } })
+      d.latexView.focus()
     }
     updateSyncStatus()
   }
@@ -594,6 +627,14 @@ function updateScratchBanner() {
           session ? '' : ' <button type="button" class="link" id="guest-rename">change name</button>'
         }. Changes are saved for everyone who can open it.`
     $('guest-rename')?.addEventListener('click', renameGuest)
+    return
+  }
+  if (session && draft && !draft.id) {
+    b.hidden = false
+    b.className = 'banner'
+    b.innerHTML = draft.creating
+      ? 'Saving as a new draft…'
+      : 'You have no drafts yet. Start typing and this becomes a saved draft, or use <b>New</b> or <b>Open file…</b>.'
     return
   }
   if (session) {
@@ -1118,12 +1159,9 @@ async function openLink(token) {
 
 async function openFirstOrNew() {
   if (drafts.length) return openDraft(drafts[0].id)
-  draft = null
-  openScratch('')
-  // Signed in with no drafts: offer to create one.
-  $('banner').hidden = false
-  $('banner').className = 'banner'
-  $('banner').innerHTML = 'You have no drafts yet. Click <b>New</b> to create one, or <b>Open file…</b> to start from a Markdown file.'
+  // Signed in with no drafts: an empty page that becomes a saved draft as
+  // soon as something is typed (see startAutoCreate).
+  openScratch('', { autoCreate: true })
 }
 
 async function openFromHashOrLast() {
