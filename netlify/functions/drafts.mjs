@@ -86,6 +86,17 @@ class Refusal extends Error {
   }
 }
 
+const GOOGLE_CLIENT_ID_SHAPE = /^[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com$/;
+
+function googleClientId() {
+  const id = (process.env.GOOGLE_CLIENT_ID || '').trim();
+  if (!GOOGLE_CLIENT_ID_SHAPE.test(id)) {
+    if (id) console.error('drafts: GOOGLE_CLIENT_ID is not a client ID (….apps.googleusercontent.com); sign-in is off.');
+    return null;
+  }
+  return id;
+}
+
 function env(name) {
   const value = process.env[name];
   if (!value) throw new Refusal(`The server is missing ${name}.`, 500);
@@ -159,11 +170,13 @@ const colourFor = (email) => {
 /* ------------------------------------------------------------------ */
 
 async function verifyGoogle(credential) {
+  const audience = googleClientId();
+  if (!audience) throw new Refusal('Google sign-in is not set up on the server (GOOGLE_CLIENT_ID).', 500);
   let payload;
   try {
     ({ payload } = await jwtVerify(String(credential || ''), GOOGLE_JWKS, {
       issuer: GOOGLE_ISSUERS,
-      audience: env('GOOGLE_CLIENT_ID'),
+      audience,
     }));
   } catch (e) {
     if (e instanceof Refusal) throw e;
@@ -303,7 +316,9 @@ export default async function handler(req) {
   try {
     if (req.method === 'GET') {
       // The Google client ID is public; serving it keeps it in one place.
-      if (route === 'config') return json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null });
+      // Serve it only if it looks like one, so a client secret pasted into the
+      // wrong variable is never published.
+      if (route === 'config') return json({ googleClientId: googleClientId() });
       const user = await requireUser(req);
       if (route === 'me') return json({ user });
       if (route === 'list') return json({ drafts: await listDrafts(user.email) });
