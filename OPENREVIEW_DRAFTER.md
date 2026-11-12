@@ -8,7 +8,7 @@ needs.
 
 Anyone can use the page without an account, just to convert text. Signing in
 with Google saves drafts and lets several people edit one draft at the same
-time.
+time. A draft can also be opened through a share link, without signing in.
 
 ```
 static/openreview-drafter/        the page (copied from the openreview-markdown repository)
@@ -35,9 +35,25 @@ here.
   Liveblocks stores the text and merges everyone's edits live. It also stores
   the title and owner (room metadata) and who may open the draft (room users
   accesses), so there is only one sharing list.
-- **Sharing.** Any member can add someone by e-mail address. The owner can
-  remove anyone, and anyone can leave. Only the owner can delete a draft. The
-  person added signs in with Google using that address and opens the link.
+- **Sharing by e-mail.** Any member can add someone by e-mail address. The
+  owner can remove anyone, and anyone can leave. Only the owner can delete a
+  draft. The person added signs in with Google using that address and then
+  finds the draft in their list.
+- **Share links.** Any member can copy the draft's share link
+  (`…/openreview-drafter/#s=<token>`, 256 random bits). It opens the draft
+  without signing in, as a guest. Guests choose a display name. The owner
+  sets the link to *can edit* (the default), *can view* or *off*, and can
+  reset it, which makes the old link stop working. The token is kept in the
+  room metadata (`linkToken`, `linkMode`). Guests get a Liveblocks access
+  token for that one room only, and it is read-only for a *view* link. The
+  token sits after `#`, so browsers never send it to the server in the page
+  request.
+- **Idle connections.** Liveblocks bills by connection time. A visible page
+  with no key press, click, scroll or touch for 5 minutes disconnects, once
+  everything is saved, and shows "Paused while idle". The next key press or
+  click reconnects it, and edits made in between are merged. A tab in the
+  background disconnects after 1 minute and reconnects when it is shown again
+  (Liveblocks' `backgroundKeepAliveTimeout`).
 - **Saving.** There is no save button. The status reads "Saving…" and then
   "Saved". The browser warns before the page closes while edits have not
   reached Liveblocks yet, and before it closes with a changed scratch draft
@@ -100,9 +116,9 @@ Then open `http://localhost:8888/openreview-drafter/`. `netlify dev` reads
 - **Liveblocks free plan.** At most 10 people in one draft at once, 500 drafts
   active in a month, and 10 MB per draft. A small Liveblocks badge is shown,
   which the free plan requires.
-- **Removing someone.** Access is checked when a person connects to a draft.
-  Someone already editing keeps working until they reload or lose the
-  connection.
+- **Removing someone, or changing a link.** Access is checked when a person
+  connects. Someone already editing keeps working until they reconnect, which
+  happens at the latest after they go idle or the tab sits in the background.
 - **Signing out.** Signing out forgets the session in that browser. A session
   token that was copied elsewhere stays valid until it expires (30 days), or
   until `DRAFTS_SESSION_SECRET` is changed.

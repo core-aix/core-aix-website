@@ -287,3 +287,11 @@ dialog h3 { font-size: 0.875rem; margin: 1rem 0 0.4rem; color: var(--dark-blue);
 .zoom button:last-child { border-radius: 0 3px 3px 0; }
 #zoom-reset { min-width: 3.4rem; font-variant-numeric: tabular-nums; font-weight: normal; }
 .zoom button:hover { background: var(--chrome); }
+
+/* Share links, guests and idle state */
+.sync-status.idle { color: #6b6b6b; font-style: italic; }
+dialog h3.first { margin-top: 0; }
+.link-controls { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; font-size: 0.8125rem; }
+.link-controls select { padding: 0.25rem 0.4rem; border: 1px solid #bbb; border-radius: 4px; }
+.link-controls .link { color: #b3261e; }
+.banner .link { color: inherit; }
