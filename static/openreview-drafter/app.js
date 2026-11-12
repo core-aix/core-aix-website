@@ -43,7 +43,7 @@ $$
 \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
 $$
 
-- Write maths as in a paper under *Plain LaTeX*.
+- Write in the *Markdown* tab, with maths as in a LaTeX paper.
 - *OpenReview text* shows what to paste, with only the backslashes OpenReview needs.
 - Sign in with Google to save drafts and write them together.
 `
@@ -975,7 +975,7 @@ async function renameGuest() {
 
 // ---------------------------------------------------------------- character counts
 /*
- * Two counts: the raw Markdown (the plain-LaTeX source) and the OpenReview text
+ * Two counts: the Markdown source (maths written as in LaTeX) and the OpenReview text
  * (what gets pasted, so what OpenReview's character limit applies to). With
  * text selected in either editor, both counts are for the selection: the other
  * form is worked out by converting just the selected text.
@@ -1005,14 +1005,14 @@ function updateCounts() {
   if (!sel) {
     el.classList.remove('selection')
     el.innerHTML = `Markdown ${fmt(latex.length)} · OpenReview <b>${fmt(or.length)}</b> characters`
-    el.title = 'Markdown: the plain-LaTeX text. OpenReview: the text you paste, which OpenReview’s limit applies to. Select text to count part of it.'
+    el.title = 'Markdown: the text in the Markdown tab. OpenReview: the text you paste, which OpenReview’s limit applies to. Select text to count part of it.'
     return
   }
   const selLatex = inLatex ? sel : ORConvert.fromOpenReview(sel)
   const selOr = inLatex ? toOR(sel) : sel
   el.classList.add('selection')
   el.innerHTML = `Selected: Markdown ${fmt(selLatex.length)} · OpenReview <b>${fmt(selOr.length)}</b> <span class="of">of ${fmt(latex.length)} · ${fmt(or.length)}</span>`
-  el.title = `The selection, as ${inLatex ? 'plain LaTeX and converted to OpenReview text' : 'OpenReview text and converted back to plain LaTeX'}.`
+  el.title = `The selection, as ${inLatex ? 'Markdown and converted to OpenReview text' : 'OpenReview text and converted back to Markdown'}.`
 }
 
 // ---------------------------------------------------------------- preview
@@ -1038,7 +1038,7 @@ function showTab(tab) {
   $('latex-editor').hidden = tab !== 'latex'
   $('or-editor').hidden = tab !== 'or'
   $('tab-hint').textContent =
-    tab === 'latex' ? 'Write maths normally' : 'Exactly what you paste. Edits update the LaTeX.'
+    tab === 'latex' ? 'Markdown, with maths as in LaTeX' : 'Exactly what you paste. Edits update the Markdown.'
   ;(tab === 'latex' ? draft?.latexView : orView)?.requestMeasure()
   scheduleCounts()
 }

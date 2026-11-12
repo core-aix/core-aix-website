@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OpenReview Drafter</title>
-  <meta name="description" content="Write OpenReview replies together in LaTeX and see them exactly as OpenReview will show them.">
+  <meta name="description" content="Write OpenReview replies together in Markdown with LaTeX maths, and see them exactly as OpenReview will show them.">
   <link rel="icon" type="image/png" href="/images/core-aix-logo.png">
   <link rel="stylesheet" href="style.css">
 
@@ -64,7 +64,7 @@
       <button id="new-draft">New</button>
       <button id="open-file" title="Start a draft from a Markdown file on this computer">Open file…</button>
       <input id="open-file-input" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
-      <button id="download" title="Download this draft (plain LaTeX Markdown)">Download .md</button>
+      <button id="download" title="Download this draft as a Markdown file">Download .md</button>
       <button id="delete-draft" class="danger" hidden>Delete</button>
     </div>
     <div class="group right">
@@ -83,9 +83,9 @@
     <section class="pane">
       <div class="pane-head tabs" role="tablist">
         <button role="tab" class="tab active" data-tab="latex"
-          title="Write maths as in a paper. Everyone editing this draft sees changes live.">Plain LaTeX</button>
+          title="Markdown, with maths written as in a LaTeX paper. Everyone editing this draft sees changes live.">Markdown</button>
         <button role="tab" class="tab" data-tab="or"
-          title="Exactly what gets pasted into OpenReview. Edits here update the plain LaTeX.">OpenReview text</button>
+          title="Exactly what gets pasted into OpenReview. Edits here update the Markdown.">OpenReview text</button>
         <span id="tab-hint" class="tab-hint"></span>
         <span id="spell-status" class="spell-status"></span>
         <label for="spell-lang" class="sr-only">Spell-check language</label>
