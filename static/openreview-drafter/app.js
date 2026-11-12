@@ -218,15 +218,8 @@ const prefs = Object.assign({ zoom: 1, tab: 'latex' }, LS.get('ord:prefs'))
 const savePrefs = () => LS.set('ord:prefs', prefs)
 
 // ---------------------------------------------------------------- spell check
-function defaultSpellLanguage() {
-  for (const l of navigator.languages || [navigator.language]) {
-    if (SPELL_LANGUAGES[l]) return l
-    const base = String(l).split('-')[0]
-    if (SPELL_LANGUAGES[base]) return base
-    if (base === 'en') return 'en-GB'
-  }
-  return 'en-GB'
-}
+// English (US) unless someone picks another language (remembered per browser).
+const DEFAULT_SPELL_LANGUAGE = 'en-US'
 
 const spell = createSpellChecker({
   workerUrl: new URL('./vendor/spell-worker.js', import.meta.url),
@@ -1522,7 +1515,7 @@ async function start() {
   const langSel = $('spell-lang')
   langSel.add(new Option('Spelling: off', 'off'))
   for (const [code, { label }] of Object.entries(SPELL_LANGUAGES)) langSel.add(new Option(label, code))
-  langSel.value = prefs.spell || defaultSpellLanguage()
+  langSel.value = (SPELL_LANGUAGES[prefs.spell] || prefs.spell === 'off') ? prefs.spell : DEFAULT_SPELL_LANGUAGE
   langSel.addEventListener('change', () => {
     prefs.spell = langSel.value
     savePrefs()
