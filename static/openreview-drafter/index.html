@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenReview Drafter</title>
+  <meta name="description" content="Write OpenReview replies together in LaTeX and see them exactly as OpenReview will show them.">
+  <link rel="icon" type="image/png" href="/images/core-aix-logo.png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Same library versions as openreview-web (package-lock.json / MathjaxScript.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.6/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.17/dist/purify.min.js"></script>
+  <script src="escape.js"></script>
+  <script src="or-render.js"></script>
+  <script>
+    // Same as openreview-web lib/mathjax-config.js
+    window.MathJax = {
+      loader: { load: ['ui/safe'] },
+      options: { ignoreHtmlClass: 'disable-tex-rendering' },
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+      chtml: {
+        scale: 1, minScale: 0.5, matchFontHeight: true, mtextInheritFont: false,
+        merrorInheritFont: true, mathmlSpacing: false, skipAttributes: {},
+        exFactor: 0.5, displayAlign: 'left', displayIndent: '0',
+      },
+      startup: {
+        typeset: false,
+        ready() {
+          MathJax.startup.defaultReady()
+          const { safe } = MathJax.startup.document
+          safe.filterAttributes.set('fontfamily', 'filterFamily')
+          safe.filterMethods.filterFamily = (_safe, family) => family.split(/;/)[0]
+        },
+      },
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml-full.js" defer></script>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="/" title="CORE-AIx home">
+      <img src="/images/core-aix-logo.png" alt="" onerror="this.remove()">
+      <span>CORE-AIx</span>
+    </a>
+    <h1>OpenReview Drafter</h1>
+    <div class="account">
+      <div id="google-button" hidden></div>
+      <div id="user-menu" class="user-menu" hidden>
+        <img id="user-avatar" alt="" referrerpolicy="no-referrer">
+        <span id="user-name"></span>
+        <button id="sign-out" class="link">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="group">
+      <label for="draft-select" class="sr-only">Open draft</label>
+      <select id="draft-select" hidden></select>
+      <button id="draft-title" class="draft-title" title="Rename this draft"></button>
+      <button id="new-draft">New</button>
+      <button id="open-file" title="Start a draft from a Markdown file on this computer">Open file…</button>
+      <input id="open-file-input" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
+      <button id="download" title="Download this draft (plain LaTeX Markdown)">Download .md</button>
+      <button id="delete-draft" class="danger" hidden>Delete</button>
+    </div>
+    <div class="group right">
+      <div id="presence" class="presence" aria-label="People editing this draft"></div>
+      <span id="sync-status" class="sync-status"></span>
+      <button id="share" hidden>Share</button>
+      <span id="count" class="count"></span>
+      <button id="copy" class="primary">Copy for OpenReview</button>
+    </div>
+  </div>
+
+  <div id="banner" class="banner" role="status" hidden></div>
+
+  <main>
+    <section class="pane">
+      <div class="pane-head tabs" role="tablist">
+        <button role="tab" class="tab active" data-tab="latex"
+          title="Write math as in a paper. Everyone editing this draft sees changes live.">Plain LaTeX</button>
+        <button role="tab" class="tab" data-tab="or"
+          title="Exactly what gets pasted into OpenReview. Edits here update the plain LaTeX.">OpenReview text</button>
+        <span id="tab-hint" class="tab-hint"></span>
+      </div>
+      <div id="latex-editor" class="cm-host"></div>
+      <div id="or-editor" class="cm-host" hidden></div>
+    </section>
+
+    <section class="pane">
+      <div class="pane-head">
+        Preview (as on OpenReview)
+        <div class="zoom" title="Zoom the preview (or Ctrl/⌘ + scroll over it)">
+          <button id="zoom-out" aria-label="Zoom out">−</button>
+          <button id="zoom-reset" aria-label="Reset zoom">100%</button>
+          <button id="zoom-in" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+      <div class="scroll" id="preview-scroll">
+        <div class="note-content">
+          <div><strong class="note-content-field">Comment:</strong>
+            <div id="preview" class="note-content-value markdown-rendered"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="dialog">
+    <form method="dialog">
+      <h2 id="dialog-title"></h2>
+      <div id="dialog-body"></div>
+      <div id="dialog-buttons" class="dialog-buttons"></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
