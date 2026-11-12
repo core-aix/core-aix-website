@@ -216,6 +216,7 @@ function makeOrEditor() {
         baseTheme,
         orReadOnly.of([]),
         EditorView.updateListener.of((u) => {
+          if (u.selectionSet || u.docChanged) scheduleCounts()
           if (!u.docChanged || applyingOr) return
           clearTimeout(orDirtyTimer)
           orDirtyTimer = setTimeout(applyOrEdits, 250)
@@ -327,6 +328,9 @@ function mountLatexEditor(d) {
         placeholder('Write your reply here. Math as in LaTeX: $x_i$, $$\\sum_i x_i$$ …'),
         yCollab(d.ytext, d.awareness, { undoManager }),
         readOnlyExt(d.readOnly),
+        EditorView.updateListener.of((u) => {
+          if (u.selectionSet) scheduleCounts()
+        }),
       ],
     }),
   })
@@ -345,7 +349,7 @@ function derive() {
   draft.or = or
   // Don't overwrite the OpenReview tab while someone is typing in it.
   if (!orDirtyTimer) setEditorText(orView, or)
-  $('count').textContent = `${or.length.toLocaleString()} characters`
+  updateCounts()
   renderPreview(or)
   updateScratchBanner()
 }
@@ -622,6 +626,48 @@ async function renameGuest() {
   updateScratchBanner()
 }
 
+// ---------------------------------------------------------------- character counts
+/*
+ * Two counts: the raw Markdown (the plain-LaTeX source) and the OpenReview text
+ * (what gets pasted, so what OpenReview's character limit applies to). With
+ * text selected in either editor, both counts are for the selection: the other
+ * form is worked out by converting just the selected text.
+ */
+let countsFrame = 0
+function scheduleCounts() {
+  cancelAnimationFrame(countsFrame)
+  countsFrame = requestAnimationFrame(updateCounts)
+}
+
+function selectedText(view) {
+  if (!view) return ''
+  return view.state.selection.ranges
+    .filter((r) => !r.empty)
+    .map((r) => view.state.sliceDoc(r.from, r.to))
+    .join('\n')
+}
+
+function updateCounts() {
+  const el = $('count')
+  if (!draft) return (el.textContent = '')
+  const fmt = (n) => n.toLocaleString()
+  const latex = draft.ytext.toString()
+  const or = draft.or ?? toOR(latex)
+  const inLatex = prefs.tab === 'latex'
+  const sel = selectedText(inLatex ? draft.latexView : orView)
+  if (!sel) {
+    el.classList.remove('selection')
+    el.innerHTML = `Markdown ${fmt(latex.length)} · OpenReview <b>${fmt(or.length)}</b> characters`
+    el.title = 'Markdown: the plain-LaTeX text. OpenReview: the text you paste, which OpenReview’s limit applies to. Select text to count part of it.'
+    return
+  }
+  const selLatex = inLatex ? sel : ORConvert.fromOpenReview(sel)
+  const selOr = inLatex ? toOR(sel) : sel
+  el.classList.add('selection')
+  el.innerHTML = `Selected: Markdown ${fmt(selLatex.length)} · OpenReview <b>${fmt(selOr.length)}</b> <span class="of">of ${fmt(latex.length)} · ${fmt(or.length)}</span>`
+  el.title = `The selection, as ${inLatex ? 'plain LaTeX and converted to OpenReview text' : 'OpenReview text and converted back to plain LaTeX'}.`
+}
+
 // ---------------------------------------------------------------- preview
 const preview = $('preview')
 let typesetChain = Promise.resolve()
@@ -647,6 +693,7 @@ function showTab(tab) {
   $('tab-hint').textContent =
     tab === 'latex' ? 'Write math normally' : 'Exactly what you paste. Edits update the LaTeX.'
   ;(tab === 'latex' ? draft?.latexView : orView)?.requestMeasure()
+  scheduleCounts()
 }
 document.querySelectorAll('.tab').forEach((t) =>
   t.addEventListener('click', () => {
