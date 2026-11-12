@@ -23,7 +23,7 @@ import {
  *    it and returns our own session token (30 days), kept in localStorage.
  *  - Each draft is a Liveblocks room holding one Y.Text ("latex"), the plain
  *    LaTeX source. Everyone in the room edits it live.
- *  - The OpenReview text and the preview are derived from that source. Edits
+ *  - The OpenReview Markdown and the preview are derived from that source. Edits
  *    made in the OpenReview tab are converted back and applied to the source.
  *  - Signed out, there is one scratch draft that lives only in this page.
  *  - A share link (#s=<token>) opens a draft without signing in, as a guest,
@@ -43,8 +43,8 @@ $$
 \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}
 $$
 
-- Write in the *Markdown* tab, with maths as in a LaTeX paper.
-- *OpenReview text* shows what to paste, with only the backslashes OpenReview needs.
+- Write in *Standard Markdown*, with maths as in a LaTeX paper.
+- *OpenReview Markdown* is what to paste: the same text with the backslashes OpenReview needs.
 - Sign in with Google to save drafts and write them together.
 `
 
@@ -431,7 +431,7 @@ function mountLatexEditor(d) {
   })
 }
 
-// Recompute the OpenReview text, the preview and the counts from the source.
+// Recompute the OpenReview Markdown, the preview and the counts from the source.
 let deriveTimer
 function scheduleDerive() {
   clearTimeout(deriveTimer)
@@ -928,7 +928,7 @@ function updateScratchBanner() {
     b.className = 'banner'
     const who = session ? esc(session.user.name) : esc(guestName() || 'Guest')
     b.innerHTML = draft.readOnly
-      ? `<b>View only.</b> “${esc(draft.title)}” was shared with you through a link. You can copy the OpenReview text or download it.`
+      ? `<b>View only.</b> “${esc(draft.title)}” was shared with you through a link. You can copy the OpenReview Markdown or download it.`
       : `You are editing “${esc(draft.title)}” through a share link, as <b>${who}</b>${
           session ? '' : ' <button type="button" class="link" id="guest-rename">change name</button>'
         }. Changes are saved for everyone who can open it.`
@@ -975,7 +975,7 @@ async function renameGuest() {
 
 // ---------------------------------------------------------------- character counts
 /*
- * Two counts: the Markdown source (maths written as in LaTeX) and the OpenReview text
+ * Two counts: the standard Markdown (maths written as in LaTeX) and the OpenReview Markdown
  * (what gets pasted, so what OpenReview's character limit applies to). With
  * text selected in either editor, both counts are for the selection: the other
  * form is worked out by converting just the selected text.
@@ -1004,15 +1004,15 @@ function updateCounts() {
   const sel = selectedText(inLatex ? draft.latexView : orView)
   if (!sel) {
     el.classList.remove('selection')
-    el.innerHTML = `Markdown ${fmt(latex.length)} · OpenReview <b>${fmt(or.length)}</b> characters`
-    el.title = 'Markdown: the text in the Markdown tab. OpenReview: the text you paste, which OpenReview’s limit applies to. Select text to count part of it.'
+    el.innerHTML = `Standard ${fmt(latex.length)} · OpenReview <b>${fmt(or.length)}</b> characters`
+    el.title = 'Standard: the standard Markdown. OpenReview: the OpenReview Markdown you paste, which OpenReview’s limit applies to. Select text to count part of it.'
     return
   }
   const selLatex = inLatex ? sel : ORConvert.fromOpenReview(sel)
   const selOr = inLatex ? toOR(sel) : sel
   el.classList.add('selection')
-  el.innerHTML = `Selected: Markdown ${fmt(selLatex.length)} · OpenReview <b>${fmt(selOr.length)}</b> <span class="of">of ${fmt(latex.length)} · ${fmt(or.length)}</span>`
-  el.title = `The selection, as ${inLatex ? 'Markdown and converted to OpenReview text' : 'OpenReview text and converted back to Markdown'}.`
+  el.innerHTML = `Selected: Standard ${fmt(selLatex.length)} · OpenReview <b>${fmt(selOr.length)}</b> <span class="of">of ${fmt(latex.length)} · ${fmt(or.length)}</span>`
+  el.title = `The selection, as ${inLatex ? 'standard Markdown and converted to OpenReview Markdown' : 'OpenReview Markdown and converted back to standard Markdown'}.`
 }
 
 // ---------------------------------------------------------------- preview
@@ -1038,7 +1038,7 @@ function showTab(tab) {
   $('latex-editor').hidden = tab !== 'latex'
   $('or-editor').hidden = tab !== 'or'
   $('tab-hint').textContent =
-    tab === 'latex' ? 'Markdown, with maths as in LaTeX' : 'Exactly what you paste. Edits update the Markdown.'
+    tab === 'latex' ? 'Maths as in LaTeX, no extra escaping' : 'Exactly what you paste into OpenReview'
   ;(tab === 'latex' ? draft?.latexView : orView)?.requestMeasure()
   scheduleCounts()
 }

@@ -64,7 +64,7 @@
       <button id="new-draft">New</button>
       <button id="open-file" title="Start a draft from a Markdown file on this computer">Open file…</button>
       <input id="open-file-input" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
-      <button id="download" title="Download this draft as a Markdown file">Download .md</button>
+      <button id="download" title="Download this draft as a Markdown file (standard Markdown)">Download .md</button>
       <button id="delete-draft" class="danger" hidden>Delete</button>
     </div>
     <div class="group right">
@@ -83,9 +83,9 @@
     <section class="pane">
       <div class="pane-head tabs" role="tablist">
         <button role="tab" class="tab active" data-tab="latex"
-          title="Markdown, with maths written as in a LaTeX paper. Everyone editing this draft sees changes live.">Markdown</button>
+          title="Ordinary Markdown, with maths written as in a LaTeX paper. Everyone editing this draft sees changes live.">Standard Markdown</button>
         <button role="tab" class="tab" data-tab="or"
-          title="Exactly what gets pasted into OpenReview. Edits here update the Markdown.">OpenReview text</button>
+          title="The same text with the extra backslashes OpenReview needs: exactly what you paste. Edits here update the standard Markdown.">OpenReview Markdown</button>
         <span id="tab-hint" class="tab-hint"></span>
         <span id="spell-status" class="spell-status"></span>
         <label for="spell-lang" class="sr-only">Spell-check language</label>

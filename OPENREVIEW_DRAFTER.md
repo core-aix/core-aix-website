@@ -13,7 +13,7 @@ time. A draft can also be opened through a share link, without signing in.
 ```
 static/openreview-drafter/        the page (copied from the openreview-markdown repository)
   index.html, app.js, style.css
-  escape.js                       LaTeX <-> OpenReview text conversion
+  escape.js                       standard <-> OpenReview Markdown conversion
   or-render.js                    OpenReview's own Markdown settings
   vendor/collab.js                CodeMirror, Yjs, the Liveblocks client and the spell checker, bundled
   vendor/spell-worker.js          nspell, which checks spelling in a background worker
