@@ -12,14 +12,26 @@
   targetPort = 1313
 
 # Paper landing pages moved next to their PDFs, which Google Scholar requires.
+# Pretty URLs serves /papers/name.html at /papers/name, so redirect straight
+# there. The mixed-case .html rules cover links shared before the rename.
 [[redirects]]
   from = "/publications/federation-is-the-way-forward-for-ai-agents/"
-  to = "/papers/HW_FedAgents2026.html"
+  to = "/papers/hw_fedagents2026"
   status = 301
 
 [[redirects]]
   from = "/publications/sw-icmlposition-2026/"
-  to = "/papers/SW_ICMLPosition2026.html"
+  to = "/papers/sw_icmlposition2026"
+  status = 301
+
+[[redirects]]
+  from = "/papers/HW_FedAgents2026.html"
+  to = "/papers/hw_fedagents2026"
+  status = 301
+
+[[redirects]]
+  from = "/papers/SW_ICMLPosition2026.html"
+  to = "/papers/sw_icmlposition2026"
   status = 301
 
 [functions]

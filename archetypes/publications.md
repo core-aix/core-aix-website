@@ -1,9 +1,10 @@
 ---
 # Google Scholar only reads citation_pdf_url when the PDF sits in the same
 # directory as the landing page, so keep url next to pdf under /papers/.
+# Keep url lowercase: Netlify serves it at /papers/filename (lowercase, no .html).
 title: "Paper title exactly as printed in the PDF"
 date: {{ .Date }}
-url: "/papers/FILENAME.html"
+url: "/papers/filename.html"
 pdf: "/papers/FILENAME.pdf"
 authors:
   - "Full Name"

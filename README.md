@@ -89,4 +89,4 @@ Tip: After approval, publishing a new episode is just adding a new blog post + m
 2. Run `hugo new publications/my-paper.md` and fill in every field, including the full abstract.
 3. Add the paper to `content/publications/_index.md` with an `[[Abstract]]` link to its landing page.
 
-Keep `url` in the same directory as `pdf`: Google Scholar ignores `citation_pdf_url` otherwise.
+Keep `url` in the same directory as `pdf`: Google Scholar ignores `citation_pdf_url` otherwise. Keep `url` lowercase too: Netlify serves `/papers/name.html` at `/papers/name` and redirects mixed-case paths to lowercase. The build fails if either rule is broken.
