@@ -1,7 +1,7 @@
 ---
 title: "Position: Let's Develop Data Probes to Fundamentally Understand How Data Affects LLM Performance"
 slug: "sw-icmlposition-2026"
-url: "/papers/SW_ICMLPosition2026.html"
+url: "/papers/sw_icmlposition2026.html"
 date: 2026-07-06
 publishDate: 2026-05-12
 authors:

@@ -1,0 +1,11 @@
+{{- /* Netlify's Pretty URLs serve /papers/name.html at /papers/name (with a 301
+     from the .html form) and lowercase it, so paper landing pages use that as
+     their canonical address. */ -}}
+{{- $url := .Permalink -}}
+{{- if and .IsPage (eq .Section "publications") -}}
+  {{- $url = strings.TrimSuffix ".html" $url -}}
+  {{- if ne $url (lower $url) -}}
+    {{- errorf "%s: url %q must be lowercase, because Netlify redirects mixed-case paths to lowercase" .File.Path .RelPermalink -}}
+  {{- end -}}
+{{- end -}}
+{{- return $url -}}

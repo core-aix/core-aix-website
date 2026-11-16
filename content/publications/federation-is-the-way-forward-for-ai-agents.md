@@ -1,7 +1,7 @@
 ---
 title: "Federation Is the Way Forward for AI Agents"
 slug: "federation-is-the-way-forward-for-ai-agents"
-url: "/papers/HW_FedAgents2026.html"
+url: "/papers/hw_fedagents2026.html"
 date: 2026-05-15
 authors:
   - "Herbert Woisetschläger"

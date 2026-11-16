@@ -1,12 +1,16 @@
 {{- if and .IsPage (eq .Section "publications") (.Params.pdf) -}}
   {{- $pdfURL := absURL .Params.pdf -}}
+  {{- $pageURL := partial "canonical-url.html" . -}}
+  {{- if ne (path.Dir .Params.pdf) (path.Dir .RelPermalink) -}}
+    {{- errorf "%s: url and pdf must be in the same directory, or Google Scholar ignores citation_pdf_url" .File.Path -}}
+  {{- end -}}
   <meta name="citation_title" content="{{ .Title }}">
   {{- range .Params.authors }}
   <meta name="citation_author" content="{{ . }}">
   {{- end }}
   <meta name="citation_publication_date" content="{{ .Date.Format "2006/01/02" }}">
   <meta name="citation_pdf_url" content="{{ $pdfURL }}">
-  <meta name="citation_abstract_html_url" content="{{ .Permalink }}">
+  <meta name="citation_abstract_html_url" content="{{ $pageURL }}">
   {{- with .Params.abstract }}
   <meta name="citation_abstract" content="{{ . }}">
   {{- end }}
@@ -29,8 +33,8 @@
     "name" .Title
     "author" $authors
     "datePublished" (.Date.Format "2006-01-02")
-    "url" .Permalink
-    "mainEntityOfPage" .Permalink
+    "url" $pageURL
+    "mainEntityOfPage" $pageURL
     "encoding" (dict "@type" "MediaObject" "contentUrl" $pdfURL "encodingFormat" "application/pdf")
   }}
   {{- with .Params.abstract }}{{ $article = merge $article (dict "abstract" .) }}{{ end }}
