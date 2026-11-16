@@ -90,3 +90,5 @@ Tip: After approval, publishing a new episode is just adding a new blog post + m
 3. Add the paper to `content/publications/_index.md` with an `[[Abstract]]` link to its landing page.
 
 Keep `url` in the same directory as `pdf`: Google Scholar ignores `citation_pdf_url` otherwise. Keep `url` lowercase too: Netlify serves `/papers/name.html` at `/papers/name` and redirects mixed-case paths to lowercase. The build fails if either rule is broken.
+
+A PDF in `static/papers/` without a publication page stays out of the sitemap, so you can share its link before the paper is listed.

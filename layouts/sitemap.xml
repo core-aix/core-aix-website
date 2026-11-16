@@ -31,10 +31,12 @@
     <loc>https://agitrack.core-aix.org/</loc>
   </url>
 
-  {{ range readDir "static/papers" }}
-    {{ if and (not .IsDir) (eq (lower (path.Ext .Name)) ".pdf") }}
+  {{/* Only PDFs with a publication page, so a PDF in static/papers stays out
+       of the sitemap until its paper is listed. */}}
+  {{ range where .Site.RegularPages "Section" "publications" }}
+    {{ with .Params.pdf }}
   <url>
-    <loc>{{ absURL (printf "papers/%s" .Name) }}</loc>
+    <loc>{{ absURL . }}</loc>
   </url>
     {{ end }}
   {{ end }}
