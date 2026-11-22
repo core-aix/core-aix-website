@@ -13,7 +13,7 @@ summary: "Five principles for AI-assisted research, the points at which human ju
 - Turn recurring corrections into skills built from your own history.
 - Keep the judgement, the integrity, and the signature on the paper with the human.
 
-AI coding agents can now carry out a large share of the work in a research project, from running experiments to revising a paper. The difficulty is to make that work reliable enough to put a name on. This post sets out five principles for doing so, the points at which a human has to step in, and a few habits for getting started.
+AI coding agents can now carry out a large share of the work in a research project, from running experiments to revising a paper. The difficulty is to make that work reliable. This post sets out five principles for doing so, the points at which a human has to step in, and a few habits for getting started.
 
 The principles were distilled by the CORE-AIx Agent from aGiTrack records of our own research sessions with current models. These models are much more capable than those of even a few months ago, so older advice on working with AI is a poor guide.
 
